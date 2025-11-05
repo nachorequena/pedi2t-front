@@ -1,16 +1,19 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { CgProfile } from "react-icons/cg";
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import Swal from "sweetalert2";
 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [openProfileMenu, setOpenProfileMenu] = useState(false);
 
   const linkStyle = (path) =>
-    `px-4 py-2 font-semibold rounded-md transition ${
+    `relative px-4 py-2 font-semibold rounded-md transition-all duration-300 ${
       location.pathname === path
-        ? " text-white"
-        : "text-gray-900 hover:text-white"
+        ? "text-[#C8997E] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-[#C8997E]"
+        : " hover:text-[#C8997E]"
     }`;
 
   const handleLogout = () => {
@@ -39,31 +42,65 @@ export default function Navbar() {
     });
   };
 
+  const toggleProfileMenu = () => setOpenProfileMenu(!openProfileMenu);
+
   return (
-    <nav className=" bg-[#dbc9ac] px-6 py-4 flex justify-between items-center">
-      <h1 className="text-xl font-bold text-white select-none">
+    <nav className="bg-black/95 text-white shadow-md px-8 py-4 flex justify-between items-center relative">
+      {/* Logo */}
+      <h1
+        onClick={() => navigate("/")}
+        className="text-2xl font-extrabold  select-none cursor-pointer"
+      >
         PEDI<span className="text-[#C8997E]">2</span>T
       </h1>
 
-      <div className="flex items-center gap-4">
+      {/* Links principales */}
+      <div className="flex items-center gap-6">
         <Link to="/" className={linkStyle("/")}>
           Inicio
         </Link>
-
         <Link to="/pedidos" className={linkStyle("/pedidos")}>
           Pedidos
         </Link>
 
-        <Link to="/perfil" className={linkStyle("/perfil")}>
-          <CgProfile size={22} />
-        </Link>
+        {/* Menú de perfil */}
+        <div className="relative">
+          <button
+            onClick={toggleProfileMenu}
+            className="flex items-center gap-1 hover:text-[#C8997E] transition-all duration-300"
+          >
+            <CgProfile size={22} />
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${
+                openProfileMenu ? "rotate-180" : ""
+              }`}
+            />
+          </button>
 
-        <button
-          onClick={handleLogout}
-          className="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-md transition"
-        >
-          Cerrar sesión
-        </button>
+          {openProfileMenu && (
+            <div className="absolute right-0 mt-2 w-44 bg-gray-100 text-gray-800 rounded-lg shadow-lg overflow-hidden animate-fadeIn z-50">
+              <button
+                onClick={() => {
+                  navigate("/perfil");
+                  setOpenProfileMenu(false);
+                }}
+                className="block w-full text-left px-4 py-2  hover:bg-gray-200 transition"
+              >
+                Ver perfil
+              </button>
+              <button
+                onClick={() => {
+                  setOpenProfileMenu(false);
+                  handleLogout();
+                }}
+                className="block w-full text-left px-4 py-2 hover:bg-red-500 hover:text-white transition"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );

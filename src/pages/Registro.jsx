@@ -1,17 +1,57 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import api from "../api/axios";
 
 export default function Registro() {
   const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [direccion, setDireccion] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [diasPresenciales, setDiasPresenciales] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+
   const navigate = useNavigate();
+
+  const diasSemana = [
+    { label: "Lunes", value: "Lunes" },
+    { label: "Martes", value: "Martes" },
+    { label: "Miércoles", value: "Miercoles" },
+    { label: "Jueves", value: "Jueves" },
+    { label: "Viernes", value: "Viernes" },
+  ];
+
+  const handleCheckboxChange = (dia) => {
+    setDiasPresenciales((prev) =>
+      prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia]
+    );
+  };
+
+  const validateEmail = (email) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
+
+    // Validaciones frontend
+    if (!nombre || !apellido || !email || !password) {
+      Swal.fire(
+        "Error",
+        "Todos los campos obligatorios deben completarse.",
+        "warning"
+      );
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      Swal.fire("Error", "El email no es válido.", "warning");
+      return;
+    }
 
     if (password !== confirmPassword) {
       Swal.fire("Error", "Las contraseñas no coinciden.", "warning");
@@ -27,47 +67,53 @@ export default function Registro() {
       return;
     }
 
+    if (diasPresenciales.length === 0) {
+      Swal.fire(
+        "Error",
+        "Debes seleccionar al menos un día presencial.",
+        "warning"
+      );
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Cargar usuarios existentes
-      const existingUsers = JSON.parse(localStorage.getItem("usuarios")) || [];
-
-      // Verificar si el email ya existe
-      const emailExists = existingUsers.some(
-        (user) => user.email.toLowerCase() === email.toLowerCase()
-      );
-      if (emailExists) {
-        Swal.fire("Error", "Este correo ya está registrado.", "error");
-        setIsLoading(false);
-        return;
-      }
-
-      // Crear el nuevo usuario
-      const newUser = {
-        id: Date.now(),
-        username,
+      const response = await api.post("/usuarios/registrarUsuario", {
+        nombre,
+        apellido,
         email,
-        password, //  (en producción nunca se guarda plano)
-      };
+        telefono,
+        direccion,
+        contrasena: password,
+        diasPresenciales,
+      });
 
-      // Guardar usuario
-      existingUsers.push(newUser);
-      localStorage.setItem("usuarios", JSON.stringify(existingUsers));
-
-      Swal.fire(
-        "Registro exitoso",
-        "Tu cuenta fue creada correctamente. Ahora podés iniciar sesión.",
-        "success"
-      );
-
-      navigate("/login");
+      if (response.status === 200 || response.status === 201) {
+        Swal.fire(
+          "Registro exitoso",
+          "Tu cuenta fue creada correctamente. Ahora podés iniciar sesión.",
+          "success"
+        ).then(() => navigate("/login"));
+      }
     } catch (error) {
-      Swal.fire(
-        "Error de Registro",
-        "Ocurrió un error al intentar registrar tu cuenta.",
-        "error"
-      );
+      console.error("Error al registrar:", error);
+
+      // Mostrar errores de validación del backend si existen
+      if (
+        error.response?.status === 400 &&
+        Array.isArray(error.response.data)
+      ) {
+        Swal.fire(
+          "Errores de validación",
+          error.response.data.join("<br/>"),
+          "error"
+        );
+      } else if (error.response?.status === 409) {
+        Swal.fire("Error", "Este correo ya está registrado.", "error");
+      } else {
+        Swal.fire("Error", "No se pudo completar el registro.", "error");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +129,7 @@ export default function Registro() {
     >
       <form
         onSubmit={handleRegister}
-        className="bg-[#161616] p-10 rounded-xl shadow-[0_0_50px_rgba(200,153,126,0.15)] w-full max-w-sm text-white border border-white/5 backdrop-blur-sm"
+        className="bg-[#161616] p-10 rounded-xl shadow-[0_0_50px_rgba(200,153,126,0.15)] w-full max-w-md text-white border border-white/5 backdrop-blur-sm"
       >
         <div className="text-center mb-8">
           <h2 className="text-4xl font-extrabold mb-1">
@@ -94,72 +140,84 @@ export default function Registro() {
           </p>
         </div>
 
-        {/* Email */}
-        <div className="mb-4">
-          <label className="block mb-2 text-sm font-medium text-gray-300">
-            Email
-          </label>
-          <input
-            type="email"
-            placeholder="usuario@ejemplo.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full p-3 bg-[#1f1f1f] border-b border-gray-700 rounded-md focus:ring-0 focus:border-[#C8997E] focus:outline-none transition duration-300 placeholder-gray-500"
-          />
-        </div>
+        {/* Campos del formulario */}
+        {[
+          { label: "Nombre", value: nombre, setValue: setNombre },
+          { label: "Apellido", value: apellido, setValue: setApellido },
+          { label: "Email", type: "email", value: email, setValue: setEmail },
+          { label: "Teléfono", value: telefono, setValue: setTelefono },
+          { label: "Dirección", value: direccion, setValue: setDireccion },
+        ].map((field, i) => (
+          <div key={i} className="mb-4">
+            <label className="block mb-2 text-sm font-medium text-gray-300">
+              {field.label}
+            </label>
+            <input
+              type={field.type || "text"}
+              value={field.value}
+              onChange={(e) => field.setValue(e.target.value)}
+              required
+              className="w-full p-3 bg-[#1f1f1f] border-b border-gray-700 rounded-md focus:ring-0 focus:border-[#C8997E] transition duration-300 placeholder-gray-500"
+            />
+          </div>
+        ))}
 
-        {/* nombre de usuario */}
-        <div className="mb-4">
-          <label className="block mb-2 text-sm font-medium text-gray-300">
-            Nombre de Usuario
-          </label>
-          <input
-            type="text"
-            placeholder="Nombre"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            className="w-full p-3 bg-[#1f1f1f] border-b border-gray-700 rounded-md focus:ring-0 focus:border-[#C8997E] focus:outline-none transition duration-300 placeholder-gray-500"
-          />
-        </div>
+        {/* Contraseñas */}
+        {[
+          { label: "Contraseña", value: password, setValue: setPassword },
+          {
+            label: "Confirmar Contraseña",
+            value: confirmPassword,
+            setValue: setConfirmPassword,
+          },
+        ].map((field, i) => (
+          <div key={i} className="mb-4">
+            <label className="block mb-2 text-sm font-medium text-gray-300">
+              {field.label}
+            </label>
+            <input
+              type="password"
+              value={field.value}
+              onChange={(e) => field.setValue(e.target.value)}
+              required
+              className="w-full p-3 bg-[#1f1f1f] border-b border-gray-700 rounded-md focus:ring-0 focus:border-[#C8997E] transition duration-300 placeholder-gray-500"
+            />
+          </div>
+        ))}
 
-        {/* contraseña */}
-        <div className="mb-4">
-          <label className="block mb-2 text-sm font-medium text-gray-300">
-            Contraseña
+        {/* Días presenciales */}
+        <div className="mb-6">
+          <label className="block mb-3 text-sm font-medium text-gray-300">
+            Días Presenciales
           </label>
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full p-3 bg-[#1f1f1f] border-b border-gray-700 rounded-md focus:ring-0 focus:border-[#C8997E] focus:outline-none transition duration-300 placeholder-gray-500"
-          />
-        </div>
-
-        {/* repetir contraseña */}
-        <div className="mb-8">
-          <label className="block mb-2 text-sm font-medium text-gray-300">
-            Confirmar Contraseña
-          </label>
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            className="w-full p-3 bg-[#1f1f1f] border-b border-gray-700 rounded-md focus:ring-0 focus:border-[#C8997E] focus:outline-none transition duration-300 placeholder-gray-500"
-          />
+          <div className="grid grid-cols-2 gap-3">
+            {diasSemana.map((dia) => (
+              <label
+                key={dia.value}
+                className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer transition ${
+                  diasPresenciales.includes(dia.value)
+                    ? "bg-green-600 text-white border border-green-500"
+                    : "bg-[#1f1f1f] text-gray-300 border border-gray-700 hover:bg-[#2a2a2a]"
+                }`}
+              >
+                <span>{dia.label}</span>
+                <input
+                  type="checkbox"
+                  checked={diasPresenciales.includes(dia.value)}
+                  onChange={() => handleCheckboxChange(dia.value)}
+                  className="accent-green-500 cursor-pointer"
+                />
+              </label>
+            ))}
+          </div>
         </div>
 
         {/* Botón */}
         <button
           type="submit"
-          disabled={isLoading || password !== confirmPassword}
+          disabled={isLoading}
           className={`w-full p-3 rounded-lg font-bold text-black shadow-lg transition duration-300 ease-in-out ${
-            isLoading || password !== confirmPassword
+            isLoading
               ? "bg-gray-600 cursor-not-allowed opacity-70"
               : "bg-linear-to-r from-[#C8997E] to-[#8A5A4A] hover:from-[#E3B091] hover:to-[#A37363]"
           }`}

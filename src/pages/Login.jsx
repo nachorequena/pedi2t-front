@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import api from "../api/axios"; // ← tu archivo axios.js
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -11,47 +12,61 @@ export default function Login() {
   // Si ya hay una sesión activa, redirigir automáticamente al Home
   useEffect(() => {
     const usuarioActivo = JSON.parse(localStorage.getItem("usuarioActual"));
-    if (usuarioActivo) {
-      navigate("/");
-    }
+    if (usuarioActivo) navigate("/");
   }, [navigate]);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+
+    if (!email || !password) {
+      Swal.fire("Error", "Por favor completá todos los campos.", "warning");
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulación de carga (para mostrar spinner)
-    setTimeout(() => {
-      const usuarios = JSON.parse(localStorage.getItem("usuarios")) || [];
+    try {
+      //  Enviar datos al backend
+      const response = await api.post("/usuarios/login", {
+        email,
+        contrasena: password,
+      });
 
-      // Buscar el usuario
-      const userFound = usuarios.find(
-        (u) =>
-          u.email.toLowerCase() === email.toLowerCase() &&
-          u.password === password
-      );
+      if (response.status === 200 && response.data) {
+        const usuario = response.data;
 
-      if (userFound) {
-        // Guardar sesión activa
-        localStorage.setItem("usuarioActual", JSON.stringify(userFound));
+        // Guardar usuario en localStorage (sesión activa)
+        localStorage.setItem("usuarioActual", JSON.stringify(usuario));
 
         Swal.fire({
           icon: "success",
           title: "Bienvenido",
-          text: `Hola ${userFound.username}, ingresaste correctamente.`,
+          text: `Hola ${usuario.nombre} ${usuario.apellido}, ingresaste correctamente.`,
           confirmButtonColor: "#16a34a",
         }).then(() => navigate("/"));
       } else {
         Swal.fire({
           icon: "error",
-          title: "Credenciales inválidas",
-          text: "Verifica tu email y contraseña.",
+          title: "Error",
+          text: "Credenciales inválidas.",
           confirmButtonColor: "#dc2626",
         });
       }
+    } catch (error) {
+      console.error("Error en login:", error);
 
+      Swal.fire({
+        icon: "error",
+        title: "Error al iniciar sesión",
+        text:
+          error.response?.status === 401
+            ? "Email o contraseña incorrectos."
+            : "No se pudo conectar con el servidor.",
+        confirmButtonColor: "#dc2626",
+      });
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -90,7 +105,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full p-3 bg-[#1f1f1f] border-b border-gray-700 rounded-md focus:ring-0 focus:border-[#C8997E] focus:outline-none transition duration-300 placeholder-gray-500"
+            className="w-full p-3 bg-[#1f1f1f] border-b border-gray-700 rounded-md focus:ring-0 focus:border-[#C8997E] transition duration-300 placeholder-gray-500"
           />
         </div>
 
@@ -109,7 +124,7 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full p-3 bg-[#1f1f1f] border-b border-gray-700 rounded-md focus:ring-0 focus:border-[#C8997E] focus:outline-none transition duration-300 placeholder-gray-500"
+            className="w-full p-3 bg-[#1f1f1f] border-b border-gray-700 rounded-md focus:ring-0 focus:border-[#C8997E] transition duration-300 placeholder-gray-500"
           />
         </div>
 

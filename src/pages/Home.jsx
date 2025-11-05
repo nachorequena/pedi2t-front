@@ -1,108 +1,53 @@
 import { useEffect, useState } from "react";
 import DayMenuCard from "../componets/DayMenuCard";
 import Swal from "sweetalert2";
+import api from "../api/axios"; //  Importá tu instancia de Axios
 
 export default function Home() {
   const [menuData, setMenuData] = useState([]);
-  const [diasPresenciales, setDiasPresenciales] = useState([]);
   const [mostrarRecordatorio, setMostrarRecordatorio] = useState(false);
-  const [pedidoEnviado, setPedidoEnviado] = useState(false); // 🔹 nuevo estado
+  const [pedidoEnviado, setPedidoEnviado] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Obtener los días presenciales configurados por el usuario
-    const diasGuardados =
-      JSON.parse(localStorage.getItem("diasPresenciales")) || [];
-    setDiasPresenciales(diasGuardados);
+    const usuario = JSON.parse(localStorage.getItem("usuarioActual"));
 
-    // Datos simulados
-    const simulatedData = [
-      {
-        dia: "Lunes",
-        opciones: [
-          { id: 1, nombre: "Milanesas con puré", seleccionado: false },
-          { id: 2, nombre: "Ensalada César", seleccionado: false },
-          { id: 7, nombre: "Hamburguesa vegetariana", seleccionado: false },
-          { id: 8, nombre: "Sopa de verduras", seleccionado: false },
-        ],
-      },
-      {
-        dia: "Martes",
-        opciones: [
-          { id: 3, nombre: "Tarta de jamón y queso", seleccionado: false },
-          { id: 4, nombre: "Pollo al horno", seleccionado: false },
-          { id: 9, nombre: "Ensalada griega", seleccionado: false },
-          { id: 10, nombre: "Curry de garbanzos", seleccionado: false },
-        ],
-      },
-      {
-        dia: "Miércoles",
-        opciones: [
-          { id: 5, nombre: "Pastas con salsa bolognesa", seleccionado: false },
-          { id: 6, nombre: "Wok de vegetales", seleccionado: false },
-          { id: 11, nombre: "Pizza margarita", seleccionado: false },
-          { id: 12, nombre: "Ensalada de quinoa", seleccionado: false },
-        ],
-      },
-      {
-        dia: "Jueves",
-        opciones: [
-          { id: 13, nombre: "Lomo con papas", seleccionado: false },
-          { id: 14, nombre: "Empanadas árabes", seleccionado: false },
-          { id: 15, nombre: "Ravioles con pesto", seleccionado: false },
-          { id: 16, nombre: "Wrap vegetariano", seleccionado: false },
-        ],
-      },
-      {
-        dia: "Viernes",
-        opciones: [
-          { id: 17, nombre: "Pizza calabresa", seleccionado: false },
-          { id: 18, nombre: "Merluza al horno", seleccionado: false },
-          { id: 19, nombre: "Tacos de pollo", seleccionado: false },
-          { id: 20, nombre: "Fideos alfredo", seleccionado: false },
-        ],
-      },
-    ];
+    const fetchMenus = async () => {
+      try {
+        //  Obtener menús desde el backend, según el empleado
+        const response = await api.get(`/menus`, {
+          params: { empleadoId: usuario.id },
+        });
 
-    // Filtrar según los días presenciales del usuario
-    const filtrados =
-      diasGuardados.length > 0
-        ? simulatedData.filter((dia) => diasGuardados.includes(dia.dia))
-        : [];
+        setMenuData(response.data);
 
-    // Cargar pedido guardado (si existe)
-    const pedidoGuardado =
-      JSON.parse(localStorage.getItem("pedidoSeleccionado")) || [];
+        // Verificar si ya envió pedido
+        const pedidoYaEnviado =
+          localStorage.getItem("pedidoEnviado") === "true";
+        setPedidoEnviado(pedidoYaEnviado);
 
-    // Si ya hay selecciones previas, marcarlas
-    const menuConSelecciones = filtrados.map((dia) => {
-      const seleccionDia = pedidoGuardado.find((p) => p.dia === dia.dia);
-      if (seleccionDia) {
-        return {
-          ...dia,
-          opciones: dia.opciones.map((op) => ({
-            ...op,
-            seleccionado: op.nombre === seleccionDia.menu,
-          })),
-        };
+        // Mostrar recordatorio si es viernes y no se envió el pedido
+        const hoy = new Date().getDay(); // 5 = Viernes
+        if (hoy === 5 && !pedidoYaEnviado) {
+          setMostrarRecordatorio(true);
+        }
+      } catch (error) {
+        console.error("Error al obtener los menús:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Error al cargar menús",
+          text: "No se pudo conectar con el servidor.",
+          confirmButtonColor: "#dc2626",
+        });
+      } finally {
+        setLoading(false);
       }
-      return dia;
-    });
+    };
 
-    setTimeout(() => setMenuData(menuConSelecciones), 600);
-
-    // Verificar si ya fue enviado el pedido
-    const pedidoYaEnviado = localStorage.getItem("pedidoEnviado") === "true";
-    setPedidoEnviado(pedidoYaEnviado);
-
-    // Mostrar recordatorio si es viernes y no se envió el pedido
-    const hoy = new Date().getDay(); // 5 = Viernes
-    if (hoy === 5 && !pedidoYaEnviado) {
-      setMostrarRecordatorio(true);
-    }
+    fetchMenus();
   }, []);
 
   const handleSeleccion = (diaSeleccionado, idMenu) => {
-    //  Evitar modificar si el pedido ya fue enviado
     if (pedidoEnviado) {
       Swal.fire({
         icon: "info",
@@ -151,29 +96,26 @@ export default function Home() {
     });
   };
 
-  if (diasPresenciales.length === 0) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#F8E4C3] px-6 text-center">
-        <p className="text-lg text-gray-800 max-w-md">
-          No configuraste tus días presenciales aún. <br />
-          <span className="font-semibold">Dirigite a tu perfil</span> para
-          hacerlo.
-        </p>
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <p className="text-lg animate-pulse text-gray-700">Cargando menús...</p>
       </div>
     );
   }
 
   if (menuData.length === 0) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#F8E4C3] ">
-        <p className="text-lg animate-pulse">Cargando menús...</p>
+      <div className="flex items-center justify-center h-screen px-6 text-center">
+        <p className="text-lg text-gray-800 max-w-md">
+          No se encontraron menús disponibles para tus días presenciales.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen px-6 py-10 bg-[#F8E4C3]">
-      {/*  Banner de recordatorio */}
+    <div className="min-h-screen px-6 py-10 bg-gray-100">
       {mostrarRecordatorio && (
         <div className="bg-yellow-400 text-black text-center p-3 rounded-md mb-6 font-medium shadow-md animate-pulse">
           Recordatorio: tenés tiempo hasta <b>hoy viernes</b> para enviar tu
@@ -181,9 +123,8 @@ export default function Home() {
         </div>
       )}
 
-      {/*  Aviso si el pedido ya fue enviado */}
       {pedidoEnviado && (
-        <div className="bg-green-600 text-white text-center p-3 rounded-md mb-6 font-medium shadow-md">
+        <div className="bg-green-400 text-white text-center p-3 rounded-md mb-6 font-medium shadow-md">
           Ya enviaste tu pedido semanal. No es posible modificarlo.
         </div>
       )}
@@ -192,7 +133,7 @@ export default function Home() {
         Menú de la semana
       </h1>
 
-      <div className="flex flex-col gap-8 max-w-3xl mx-auto">
+      <div className="grid grid-cols-1 gap-8 mx-auto">
         {menuData.map((dia) => (
           <DayMenuCard
             key={dia.dia}
