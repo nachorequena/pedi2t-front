@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
+import { LoadingSpinner } from "../componets/LoadingSpinner";
 
 export default function Perfil() {
   const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
@@ -66,6 +67,9 @@ export default function Perfil() {
 
     return (inicialNombre + inicialApellido).toUpperCase();
   };
+  if (!usuario) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 px-6 py-10 flex flex-col items-center">

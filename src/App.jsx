@@ -5,14 +5,20 @@ import Home from "./pages/Home";
 import Navbar from "./componets/Navbar";
 import Pedidos from "./pages/Pedidos";
 import Perfil from "./pages/Perfil";
+import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./componets/ProtectedRoute";
 
 function AppContent() {
   const location = useLocation();
 
-  // Ocultar Navbar en /login y /registro
+  // Rutas conocidas en la aplicación
+  const rutasConocidas = ["/", "/pedidos", "/perfil", "/login", "/registro"];
+
+  // Ocultar Navbar en /login, /registro o en rutas desconocidas (404)
   const hideNavbar =
-    location.pathname === "/login" || location.pathname === "/registro";
+    location.pathname === "/login" ||
+    location.pathname === "/registro" ||
+    !rutasConocidas.includes(location.pathname);
 
   return (
     <div className="min-h-screen">
@@ -48,6 +54,8 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        {/* Ruta para direcciones que no existen */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </div>
   );

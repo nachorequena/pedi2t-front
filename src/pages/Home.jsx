@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import DayMenuCard from "../componets/DayMenuCard";
 import Swal from "sweetalert2";
 import api from "../api/axios";
+import { LoadingSpinner } from "../componets/LoadingSpinner";
 
 export default function Home() {
   const [menuData, setMenuData] = useState([]);
@@ -25,24 +26,21 @@ export default function Home() {
 
     const fetchMenus = async () => {
       try {
-        // El backend espera /home/{usuarioId}
         const response = await api.get(`/home/${usuario.id}`);
 
-        // Ahora el backend devuelve response.data.platos
-        setMenuData(response.data.platos || []);
+        // El backend ahora devuelve { usuarioId, menus: [...] }
+        setMenuData(response.data.menus || []);
 
-        // Verificar si ya envió pedido
         const pedidoYaEnviado =
           localStorage.getItem("pedidoEnviado") === "true";
         setPedidoEnviado(pedidoYaEnviado);
 
-        // Mostrar recordatorio si es viernes y no se envió el pedido
         const hoy = new Date().getDay(); // 5 = Viernes
         if (hoy === 5 && !pedidoYaEnviado) {
           setMostrarRecordatorio(true);
         }
       } catch (error) {
-        console.error("Error al obtener los platos:", error);
+        console.error("Error al obtener los menús:", error);
         Swal.fire({
           icon: "error",
           title: "Error al cargar menús",
@@ -58,11 +56,7 @@ export default function Home() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-100">
-        <p className="text-lg animate-pulse text-gray-700">Cargando menús...</p>
-      </div>
-    );
+    return <LoadingSpinner text="Cargando menús..." />;
   }
 
   if (menuData.length === 0) {
@@ -94,23 +88,25 @@ export default function Home() {
         Menú de la semana
       </h1>
 
-      {/* Mostramos directamente los platos */}
+      {/* Recorremos los menús y dentro de cada uno sus platos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mx-auto">
-        {menuData.map((plato) => (
-          <DayMenuCard
-            key={plato.idPlato}
-            dia={plato.categoria} // opcional: muestra la categoría como título
-            opciones={[
-              {
-                id: plato.idPlato,
-                nombre: plato.nombre,
-                descripcion: plato.descripcion,
-                imagenUrl: plato.imagenUrl,
-              },
-            ]}
-            onSeleccion={() => {}} // lo dejamos vacío hasta adaptar el componente
-          />
-        ))}
+        {menuData.map((menu) =>
+          menu.platos.map((plato) => (
+            <DayMenuCard
+              key={`${menu.id}-${plato.idPlato}`}
+              dia={menu.descripcion} // Muestra “Menú del lunes”, etc.
+              opciones={[
+                {
+                  id: plato.idPlato,
+                  nombre: plato.nombre,
+                  descripcion: plato.descripcion,
+                  imagenUrl: plato.imagenUrl,
+                },
+              ]}
+              onSeleccion={() => {}}
+            />
+          ))
+        )}
       </div>
     </div>
   );

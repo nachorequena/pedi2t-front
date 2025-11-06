@@ -1,16 +1,86 @@
-# React + Vite
+Pedi2t - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación frontend de Pedi2t: SPA en React creada con Vite. Está pensada para gestionar pedidos y perfiles de empleados, y usa TailwindCSS para estilos rápidos, Axios para llamadas a la API y SweetAlert2 para notificaciones.
 
-Currently, two official plugins are available:
+Estado: código fuente del cliente (ruta principal: `src/`).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Características principales
 
-## React Compiler
+- Autenticación básica (login/registro).
+- Gestión y visualización de pedidos.
+- Perfil de empleado con iniciales generadas desde el nombre y apellido.
+- Configuración local de días presenciales (guardado en `localStorage`).
+- Rutas protegidas con `ProtectedRoute`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tecnologías
 
-## Expanding the ESLint configuration
+- React 19
+- Vite
+- TailwindCSS
+- React Router DOM
+- Axios
+- SweetAlert2
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Scripts disponibles
+
+Los scripts definidos en `package.json` (usa npm):
+
+```powershell
+npm install
+npm run dev    # inicia el servidor de desarrollo
+npm run build  # construye la versión de producción
+npm run preview# vista previa del build
+npm run lint   # ejecuta eslint
+```
+
+## Instalación y ejecución local
+
+1. Clonar el repositorio.
+2. Entrar en la carpeta del proyecto y ejecutar:
+
+```powershell
+npm install
+npm run dev
+```
+
+3. Abrir en el navegador la URL que indique Vite (por defecto `http://localhost:5173`).
+
+## Estructura principal del proyecto
+
+```
+src/
+  api/           # axios y helpers para llamadas a la API
+  assets/        # imágenes y recursos estáticos
+  componets/     # componentes reutilizables (Navbar, LoadingSpinner, etc.)
+  pages/         # vistas/ páginas (Home, Login, Pedidos, Perfil, Registro)
+  main.jsx       # punto de entrada
+  App.jsx        # layout y rutas
+```
+
+## Notas de implementación
+
+- Las iniciales del perfil se generan en `src/pages/Perfil.jsx` con una función que toma la primera letra del nombre y la primera letra del apellido. Si el apellido no existe, se usa la inicial de la segunda palabra del nombre o la segunda letra del primer nombre como respaldo.
+- La aplicación almacena en `localStorage`:
+  - `usuarioActual`: datos del usuario autenticado (usado para mostrar perfil).
+  - `diasPresenciales`: array con los días seleccionados por el empleado.
+
+## Variables de entorno
+
+Actualmente no hay variables obligatorias listadas en el repositorio. Si se añade un backend, normalmente se usará una variable para la URL base de la API (por ejemplo `VITE_API_URL`) y se referenciará desde `src/api/axios.js`.
+
+## Despliegue
+
+- Construir con `npm run build` y servir los ficheros estáticos resultantes (`dist/`).
+- Puedes desplegar en Netlify, Vercel, Surge o cualquier servidor estático.
+
+## Contribuciones
+
+1. Haz un fork.
+2. Crea una rama feature/bugfix.
+3. Envía un pull request con una descripción clara de los cambios.
+
+## Licencia
+
+Proyecto abierto (añade la licencia que prefieras).
+
+---

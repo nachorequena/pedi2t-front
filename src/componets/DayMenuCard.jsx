@@ -21,7 +21,7 @@ export default function DayMenuCard({ dia, opciones, onSeleccion }) {
             {/* Imagen del plato */}
             <div className="h-36 w-full overflow-hidden relative">
               <img
-                src={menu.imagen || "/placeholder.jpg"}
+                src={menu.imagenUrl || "/placeholder.jpg"}
                 alt={menu.nombre}
                 className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 ${
                   menu.seleccionado ? "opacity-90" : ""
