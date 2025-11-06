@@ -1,4 +1,4 @@
-import { CheckCircle2 } from "lucide-react"; // 👈 ícono moderno (de lucide-react)
+import { CheckCircle2 } from "lucide-react";
 
 export default function DayMenuCard({ dia, opciones, onSeleccion }) {
   return (

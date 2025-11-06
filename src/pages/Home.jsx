@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import DayMenuCard from "../componets/DayMenuCard";
 import Swal from "sweetalert2";
-import api from "../api/axios"; //  Importá tu instancia de Axios
+import api from "../api/axios";
 
 export default function Home() {
   const [menuData, setMenuData] = useState([]);
@@ -12,14 +12,24 @@ export default function Home() {
   useEffect(() => {
     const usuario = JSON.parse(localStorage.getItem("usuarioActual"));
 
+    if (!usuario || !usuario.id) {
+      Swal.fire({
+        icon: "error",
+        title: "Usuario no encontrado",
+        text: "No se encontró información del usuario. Iniciá sesión nuevamente.",
+        confirmButtonColor: "#dc2626",
+      });
+      setLoading(false);
+      return;
+    }
+
     const fetchMenus = async () => {
       try {
-        //  Obtener menús desde el backend, según el empleado
-        const response = await api.get(`/menus`, {
-          params: { empleadoId: usuario.id },
-        });
+        // El backend espera /home/{usuarioId}
+        const response = await api.get(`/home/${usuario.id}`);
 
-        setMenuData(response.data);
+        // Ahora el backend devuelve response.data.platos
+        setMenuData(response.data.platos || []);
 
         // Verificar si ya envió pedido
         const pedidoYaEnviado =
@@ -32,7 +42,7 @@ export default function Home() {
           setMostrarRecordatorio(true);
         }
       } catch (error) {
-        console.error("Error al obtener los menús:", error);
+        console.error("Error al obtener los platos:", error);
         Swal.fire({
           icon: "error",
           title: "Error al cargar menús",
@@ -46,55 +56,6 @@ export default function Home() {
 
     fetchMenus();
   }, []);
-
-  const handleSeleccion = (diaSeleccionado, idMenu) => {
-    if (pedidoEnviado) {
-      Swal.fire({
-        icon: "info",
-        title: "Pedido ya enviado",
-        text: "No podés modificar el menú porque ya enviaste tu pedido.",
-        confirmButtonColor: "#6b7280",
-      });
-      return;
-    }
-
-    const updated = menuData.map((dia) =>
-      dia.dia === diaSeleccionado
-        ? {
-            ...dia,
-            opciones: dia.opciones.map((op) => ({
-              ...op,
-              seleccionado: op.id === idMenu,
-            })),
-          }
-        : dia
-    );
-
-    setMenuData(updated);
-
-    const pedidoActualizado = updated.map((dia) => {
-      const seleccion = dia.opciones.find((op) => op.seleccionado);
-      return { dia: dia.dia, menu: seleccion ? seleccion.nombre : null };
-    });
-
-    localStorage.setItem(
-      "pedidoSeleccionado",
-      JSON.stringify(pedidoActualizado)
-    );
-
-    const dia = updated.find((d) => d.dia === diaSeleccionado);
-    const menuSeleccionado = dia.opciones.find((op) => op.id === idMenu);
-
-    Swal.fire({
-      position: "top-end",
-      icon: "success",
-      title: `Pedido actualizado: ${diaSeleccionado} → ${menuSeleccionado.nombre}`,
-      showConfirmButton: false,
-      timer: 1200,
-      toast: true,
-      color: "#064e3b",
-    });
-  };
 
   if (loading) {
     return (
@@ -133,13 +94,21 @@ export default function Home() {
         Menú de la semana
       </h1>
 
-      <div className="grid grid-cols-1 gap-8 mx-auto">
-        {menuData.map((dia) => (
+      {/* Mostramos directamente los platos */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mx-auto">
+        {menuData.map((plato) => (
           <DayMenuCard
-            key={dia.dia}
-            dia={dia.dia}
-            opciones={dia.opciones}
-            onSeleccion={handleSeleccion}
+            key={plato.idPlato}
+            dia={plato.categoria} // opcional: muestra la categoría como título
+            opciones={[
+              {
+                id: plato.idPlato,
+                nombre: plato.nombre,
+                descripcion: plato.descripcion,
+                imagenUrl: plato.imagenUrl,
+              },
+            ]}
+            onSeleccion={() => {}} // lo dejamos vacío hasta adaptar el componente
           />
         ))}
       </div>

@@ -35,7 +35,6 @@ export default function Login() {
       if (response.status === 200 && response.data) {
         const usuario = response.data;
 
-        // Guardar usuario en localStorage (sesión activa)
         localStorage.setItem("usuarioActual", JSON.stringify(usuario));
 
         Swal.fire({
