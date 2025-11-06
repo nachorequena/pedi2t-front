@@ -55,18 +55,6 @@ export default function Home() {
     fetchMenus();
   }, []);
 
-  const handleSeleccion = (dia, platoId) => {
-    console.log(`Seleccionado: ${dia} - Plato ID: ${platoId}`);
-    
-    Swal.fire({
-      icon: "success",
-      title: "Plato seleccionado",
-      text: `Has seleccionado un plato para ${dia}`,
-      timer: 2000,
-      showConfirmButton: false,
-    });
-  };
-
   if (loading) {
     return <LoadingSpinner text="Cargando menús..." />;
   }
@@ -82,33 +70,43 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Notificaciones */}
-      <div className="px-4 pt-4">
-        {mostrarRecordatorio && (
-          <div className="bg-yellow-400 text-black text-center p-3 rounded-md mb-6 font-medium shadow-md animate-pulse">
-            Recordatorio: tenés tiempo hasta <b>hoy viernes</b> para enviar tu
-            pedido semanal.
-          </div>
-        )}
+    <div className="min-h-screen px-6 py-10 bg-gray-100">
+      {mostrarRecordatorio && (
+        <div className="bg-yellow-400 text-black text-center p-3 rounded-md mb-6 font-medium shadow-md animate-pulse">
+          Recordatorio: tenés tiempo hasta <b>hoy viernes</b> para enviar tu
+          pedido semanal.
+        </div>
+      )}
 
-        {pedidoEnviado && (
-          <div className="bg-green-400 text-white text-center p-3 rounded-md mb-6 font-medium shadow-md">
-            Ya enviaste tu pedido semanal. No es posible modificarlo.
-          </div>
-        )}
-      </div>
+      {pedidoEnviado && (
+        <div className="bg-green-400 text-white text-center p-3 rounded-md mb-6 font-medium shadow-md">
+          Ya enviaste tu pedido semanal. No es posible modificarlo.
+        </div>
+      )}
 
-      <h1 className="text-2xl font-bold mb-6 text-center text-gray-900 px-4">
+      <h1 className="text-3xl font-bold mb-8 text-center text-gray-900">
         Menú de la semana
       </h1>
 
-      {/* Carrusel de menús por día */}
-      <div className="px-4 pb-6">
-        <MenuCarousel 
-          menuData={menuData} 
-          onSeleccion={handleSeleccion}
-        />
+      {/* Recorremos los menús y dentro de cada uno sus platos */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mx-auto">
+        {menuData.map((menu) =>
+          menu.platos.map((plato) => (
+            <DayMenuCard
+              key={`${menu.id}-${plato.idPlato}`}
+              dia={menu.descripcion} // Muestra “Menú del lunes”, etc.
+              opciones={[
+                {
+                  id: plato.idPlato,
+                  nombre: plato.nombre,
+                  descripcion: plato.descripcion,
+                  imagenUrl: plato.imagenUrl,
+                },
+              ]}
+              onSeleccion={() => {}}
+            />
+          ))
+        )}
       </div>
     </div>
   );
