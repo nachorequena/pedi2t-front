@@ -2,7 +2,11 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Home from "./pages/Home";
+import HomeAdmin from "./pages/HomeAdmin";
+import PedidosAdmin from "./pages/PedidosAdmin";
+import NotificarAdmin from "./pages/NotificarAdmin";
 import Navbar from "./componets/Navbar";
+import NavbarAdmin from "./componets/NavbarAdmin";
 import Pedidos from "./pages/Pedidos";
 import Perfil from "./pages/Perfil";
 import NotFound from "./pages/NotFound";
@@ -12,7 +16,10 @@ function AppContent() {
   const location = useLocation();
 
   // Rutas conocidas en la aplicación
-  const rutasConocidas = ["/", "/pedidos", "/perfil", "/login", "/registro"];
+  const rutasConocidas = ["/", "/pedidos", "/perfil", "/admin", "/admin/pedidos", "/admin/notificar", "/login", "/registro"];
+
+  // Verificar si es una ruta de admin
+  const isAdminRoute = location.pathname.startsWith("/admin");
 
   // Ocultar Navbar en /login, /registro o en rutas desconocidas (404)
   const hideNavbar =
@@ -22,7 +29,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen">
-      {!hideNavbar && <Navbar />}
+      {!hideNavbar && (isAdminRoute ? <NavbarAdmin /> : <Navbar />)}
 
       <Routes>
         {/* Rutas públicas */}
@@ -51,6 +58,30 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <Perfil />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <HomeAdmin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/pedidos"
+          element={
+            <ProtectedRoute>
+              <PedidosAdmin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/notificar"
+          element={
+            <ProtectedRoute>
+              <NotificarAdmin />
             </ProtectedRoute>
           }
         />
