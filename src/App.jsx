@@ -5,9 +5,12 @@ import Home from "./pages/Home";
 import HomeAdmin from "./pages/HomeAdmin";
 import PedidosAdmin from "./pages/PedidosAdmin";
 import NotificarAdmin from "./pages/NotificarAdmin";
+import PerfilAdmin from "./pages/PerfilAdmin";
 import Navbar from "./componets/Navbar";
 import NavbarAdmin from "./componets/NavbarAdmin";
 import Pedidos from "./pages/Pedidos";
+import Historial from "./pages/Historial";
+import Notificaciones from "./pages/Notificaciones";
 import Perfil from "./pages/Perfil";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./componets/ProtectedRoute";
@@ -16,7 +19,7 @@ function AppContent() {
   const location = useLocation();
 
   // Rutas conocidas en la aplicación
-  const rutasConocidas = ["/", "/pedidos", "/perfil", "/admin", "/admin/pedidos", "/admin/notificar", "/login", "/registro"];
+  const rutasConocidas = ["/", "/pedidos", "/historial", "/notificaciones", "/perfil", "/admin", "/admin/pedidos", "/admin/notificar", "/admin/perfil", "/login", "/registro"];
 
   // Verificar si es una ruta de admin
   const isAdminRoute = location.pathname.startsWith("/admin");
@@ -36,7 +39,7 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
 
-        {/* Rutas protegidas */}
+        {/* Rutas protegidas para usuarios */}
         <Route
           path="/"
           element={
@@ -54,6 +57,22 @@ function AppContent() {
           }
         />
         <Route
+          path="/historial"
+          element={
+            <ProtectedRoute>
+              <Historial />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notificaciones"
+          element={
+            <ProtectedRoute>
+              <Notificaciones />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/perfil"
           element={
             <ProtectedRoute>
@@ -61,10 +80,11 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        {/* Rutas protegidas para administradores */}
         <Route
           path="/admin"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="ADMIN">
               <HomeAdmin />
             </ProtectedRoute>
           }
@@ -72,7 +92,7 @@ function AppContent() {
         <Route
           path="/admin/pedidos"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="ADMIN">
               <PedidosAdmin />
             </ProtectedRoute>
           }
@@ -80,8 +100,16 @@ function AppContent() {
         <Route
           path="/admin/notificar"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="ADMIN">
               <NotificarAdmin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/perfil"
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <PerfilAdmin />
             </ProtectedRoute>
           }
         />

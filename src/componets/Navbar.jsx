@@ -1,13 +1,30 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { CgProfile } from "react-icons/cg";
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronDown, Bell } from "lucide-react";
 import Swal from "sweetalert2";
+import axios from "../api/axios";
 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [openProfileMenu, setOpenProfileMenu] = useState(false);
+  const [notificacionesSinLeer, setNotificacionesSinLeer] = useState(0);
+
+  useEffect(() => {
+    fetchNotificacionesSinLeer();
+  }, []);
+
+  const fetchNotificacionesSinLeer = async () => {
+    try {
+      const usuarioActual = JSON.parse(localStorage.getItem("usuarioActual"));
+      const response = await axios.get(`/usuarios/${usuarioActual.id}/notificaciones`);
+      const sinLeer = response.data.filter(n => !n.leida).length;
+      setNotificacionesSinLeer(sinLeer);
+    } catch (error) {
+      console.error("Error al obtener notificaciones:", error);
+    }
+  };
 
   const linkStyle = (path) =>
     `relative px-4 py-2 font-semibold rounded-md transition-all duration-300 ${
@@ -59,8 +76,28 @@ export default function Navbar() {
         <Link to="/" className={linkStyle("/")}>
           Inicio
         </Link>
+        <Link to="/historial" className={linkStyle("/historial")}>
+          Historial
+        </Link>
         <Link to="/pedidos" className={linkStyle("/pedidos")}>
           Pedidos
+        </Link>
+
+        {/* Notificaciones */}
+        <Link to="/notificaciones" className="relative">
+          <Bell 
+            size={22} 
+            className={`transition-all duration-300 ${
+              location.pathname === "/notificaciones" 
+                ? "text-[#C8997E]" 
+                : "hover:text-[#C8997E]"
+            }`}
+          />
+          {notificacionesSinLeer > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+              {notificacionesSinLeer > 9 ? "9+" : notificacionesSinLeer}
+            </span>
+          )}
         </Link>
 
         {/* Menú de perfil */}
