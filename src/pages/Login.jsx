@@ -9,10 +9,16 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Si ya hay una sesión activa, redirigir automáticamente al Home
+  // Si ya hay una sesión activa, redirigir según el rol
   useEffect(() => {
     const usuarioActivo = JSON.parse(localStorage.getItem("usuarioActual"));
-    if (usuarioActivo) navigate("/");
+    if (usuarioActivo) {
+      if (usuarioActivo.rol === "ADMIN") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+    }
   }, [navigate]);
 
   const handleLogin = async (e) => {
@@ -42,7 +48,13 @@ export default function Login() {
           title: "Bienvenido",
           text: `Hola ${usuario.nombre} ${usuario.apellido}, ingresaste correctamente.`,
           confirmButtonColor: "#16a34a",
-        }).then(() => navigate("/"));
+        }).then(() => {
+          if (usuario.rol === "ADMIN") {
+            navigate("/admin");
+          } else {
+            navigate("/");
+          }
+        });
       } else {
         Swal.fire({
           icon: "error",
