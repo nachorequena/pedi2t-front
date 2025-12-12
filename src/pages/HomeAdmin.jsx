@@ -3,6 +3,7 @@ import { Filter } from "lucide-react";
 import AdminDayCard from "../componets/AdminDayCard";
 import MenuModal from "../componets/MenuModal";
 import Swal from "sweetalert2";
+import axios from "../api/axios";
 
 export default function HomeAdmin() {
   const [selectedDay, setSelectedDay] = useState("Lunes");
@@ -36,7 +37,9 @@ export default function HomeAdmin() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteMenu = (dia, index) => {
+  const handleDeleteMenu = async (dia, index) => {
+    const menuId = menusPorDia[dia][index].id;
+    
     Swal.fire({
       icon: "warning",
       title: "¿Eliminar menú?",
@@ -45,72 +48,157 @@ export default function HomeAdmin() {
       confirmButtonText: "Sí, eliminar",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#dc2626",
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        setMenusPorDia((prev) => ({
-          ...prev,
-          [dia]: prev[dia].filter((_, i) => i !== index),
-        }));
+        try {
+          await axios.delete(`/admin/eliminarPlato/${menuId}`);
+          
+          setMenusPorDia((prev) => ({
+            ...prev,
+            [dia]: prev[dia].filter((_, i) => i !== index),
+          }));
 
-        Swal.fire({
-          icon: "success",
-          title: "¡Menú eliminado!",
-          text: "El menú ha sido eliminado correctamente.",
-          timer: 2000,
-          showConfirmButton: false,
-        });
+          Swal.fire({
+            icon: "success",
+            title: "¡Menú eliminado!",
+            text: "El menú ha sido eliminado correctamente.",
+            timer: 2000,
+            showConfirmButton: false,
+          });
+        } catch (error) {
+          console.error("Error al eliminar el menú:", error);
+          
+          Swal.fire({
+            icon: "error",
+            title: "Error al eliminar",
+            text: error.response?.data || "No se pudo eliminar el menú. Intenta nuevamente.",
+            confirmButtonColor: "#dc2626",
+          });
+        }
       }
     });
   };
 
-  const handleSaveMenu = (dia, formData) => {
-    // Crear URL temporal para preview de la imagen
-    const imagenUrl = formData.imagen 
-      ? (typeof formData.imagen === 'string' ? formData.imagen : URL.createObjectURL(formData.imagen))
-      : null;
-
-    const menuData = {
-      categoria: formData.categoria,
-      nombre: formData.menu,
-      descripcion: formData.descripcion,
-      imagenUrl: imagenUrl,
-      imagen: formData.imagen,
-    };
-
-    if (editingIndex !== null) {
-      // Editar menú existente
-      setMenusPorDia((prev) => ({
-        ...prev,
-        [dia]: prev[dia].map((menu, index) => 
-          index === editingIndex ? menuData : menu
-        ),
+  const handleSaveMenu = async (diasSeleccionados, formData) => {
+    try {
+      // Preparar FormData para enviar al backend
+      const formDataToSend = new FormData();
+      
+      // Crear el objeto DTO del plato como JSON
+      const platoDTO = {
+        nombre: formData.menu,
+        descripcion: formData.descripcion,
+        categoria: formData.categoria,
+        diasSemana: diasSeleccionados.map(dia => dia.toUpperCase()) // Convertir a mayúsculas
+      };
+      
+      console.log("Datos a enviar:", platoDTO);
+      console.log("FormData completo:", formData);
+      
+      // Agregar el DTO como Blob JSON
+      formDataToSend.append("plato", new Blob([JSON.stringify(platoDTO)], {
+        type: "application/json"
       }));
+      
+      // Agregar la imagen
+      if (formData.imagen && typeof formData.imagen !== 'string') {
+        formDataToSend.append("imagen", formData.imagen);
+        console.log("Imagen agregada:", formData.imagen.name);
+      } else {
+        console.log("No se agregó imagen");
+      }
 
-      Swal.fire({
-        icon: "success",
-        title: "¡Menú actualizado!",
-        text: `Se actualizó el menú para ${dia}`,
-        timer: 2000,
-        showConfirmButton: false,
-      });
-    } else {
-      // Agregar nuevo menú
-      setMenusPorDia((prev) => ({
-        ...prev,
-        [dia]: [...prev[dia], menuData],
-      }));
+      let response;
+      
+      if (editingIndex !== null) {
+        // Editar menú existente
+        const menuId = menusPorDia[selectedDayForModal][editingIndex].id;
+        response = await axios.put(`/admin/actualizarPlato/${menuId}`, formDataToSend, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
 
+        // Actualizar el estado local - remover de día actual y agregar a los días seleccionados
+        setMenusPorDia((prev) => {
+          const newState = { ...prev };
+          
+          // Remover del día actual
+          newState[selectedDayForModal] = prev[selectedDayForModal].filter((_, i) => i !== editingIndex);
+          
+          // Agregar a los días seleccionados
+          diasSeleccionados.forEach(dia => {
+            const existe = newState[dia].find(m => m.id === response.data.id);
+            if (!existe) {
+              newState[dia] = [...newState[dia], response.data];
+            }
+          });
+          
+          return newState;
+        });
+
+        Swal.fire({
+          icon: "success",
+          title: "¡Menú actualizado!",
+          text: `Se actualizó el menú para ${diasSeleccionados.join(", ")}`,
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      } else {
+        // Agregar nuevo menú
+        response = await axios.post("/admin/cargarPlatos", formDataToSend, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        // Agregar el nuevo menú a todos los días seleccionados
+        setMenusPorDia((prev) => {
+          const newState = { ...prev };
+          diasSeleccionados.forEach(dia => {
+            newState[dia] = [...prev[dia], response.data];
+          });
+          return newState;
+        });
+
+        Swal.fire({
+          icon: "success",
+          title: "¡Menú agregado!",
+          text: `Se agregó el menú para ${diasSeleccionados.join(", ")}`,
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      }
+
+      console.log("Menú guardado exitosamente:", response.data);
+      
+    } catch (error) {
+      console.error("Error completo:", error);
+      console.error("Response data:", error.response?.data);
+      console.error("Response status:", error.response?.status);
+      
+      let errorMessage = "No se pudo guardar el menú. Intenta nuevamente.";
+      
+      if (error.response?.data) {
+        // Si el backend devuelve un string directo
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } 
+        // Si el backend devuelve un objeto con mensaje
+        else if (error.response.data.mensaje) {
+          errorMessage = error.response.data.mensaje;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       Swal.fire({
-        icon: "success",
-        title: "¡Menú agregado!",
-        text: `Se agregó el menú para ${dia}`,
-        timer: 2000,
-        showConfirmButton: false,
+        icon: "error",
+        title: "Error al guardar",
+        text: errorMessage,
+        confirmButtonColor: "#dc2626",
       });
     }
-
-    console.log("Menú guardado:", { dia, ...menuData });
-    // Aquí puedes hacer la llamada a la API para guardar en el backend
   };
 
   return (
