@@ -7,9 +7,12 @@ export default function MenuModal({ isOpen, onClose, selectedDay, onSave, editDa
     menu: "",
     descripcion: "",
     imagen: null,
+    diasSemana: selectedDay ? [selectedDay] : [], // Días seleccionados
   });
 
   const [previewImage, setPreviewImage] = useState(null);
+  
+  const diasDisponibles = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
 
   // Cargar datos cuando se está editando
   useEffect(() => {
@@ -19,10 +22,16 @@ export default function MenuModal({ isOpen, onClose, selectedDay, onSave, editDa
         menu: editData.nombre || "",
         descripcion: editData.descripcion || "",
         imagen: editData.imagen || null,
+        diasSemana: selectedDay ? [selectedDay] : [],
       });
       setPreviewImage(editData.imagenUrl || null);
+    } else if (selectedDay) {
+      setFormData(prev => ({
+        ...prev,
+        diasSemana: [selectedDay]
+      }));
     }
-  }, [editData]);
+  }, [editData, selectedDay]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -30,6 +39,25 @@ export default function MenuModal({ isOpen, onClose, selectedDay, onSave, editDa
       ...prev,
       [name]: value,
     }));
+  };
+  
+  const handleDayToggle = (dia) => {
+    setFormData((prev) => {
+      const diasActuales = prev.diasSemana;
+      if (diasActuales.includes(dia)) {
+        // Remover día
+        return {
+          ...prev,
+          diasSemana: diasActuales.filter(d => d !== dia)
+        };
+      } else {
+        // Agregar día
+        return {
+          ...prev,
+          diasSemana: [...diasActuales, dia]
+        };
+      }
+    });
   };
 
   const handleImageChange = (e) => {
@@ -50,7 +78,14 @@ export default function MenuModal({ isOpen, onClose, selectedDay, onSave, editDa
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(selectedDay, formData);
+    
+    // Validar que se haya seleccionado al menos un día
+    if (formData.diasSemana.length === 0) {
+      alert("Debes seleccionar al menos un día de la semana");
+      return;
+    }
+    
+    onSave(formData.diasSemana, formData);
     handleClose();
   };
 
@@ -60,6 +95,7 @@ export default function MenuModal({ isOpen, onClose, selectedDay, onSave, editDa
       menu: "",
       descripcion: "",
       imagen: null,
+      diasSemana: [],
     });
     setPreviewImage(null);
     onClose();
@@ -74,7 +110,7 @@ export default function MenuModal({ isOpen, onClose, selectedDay, onSave, editDa
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-3xl">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">
-              {editData ? "Editar" : "Cargar"} Menú - {selectedDay}
+              {editData ? "Editar" : "Cargar"} Menú
             </h2>
             <button
               onClick={handleClose}
@@ -176,6 +212,32 @@ export default function MenuModal({ isOpen, onClose, selectedDay, onSave, editDa
               placeholder="Describe el menú..."
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none resize-none transition-all"
             />
+          </div>
+
+          {/* Selección de días */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-gray-700">
+              Días de la semana *
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {diasDisponibles.map((dia) => (
+                <button
+                  key={dia}
+                  type="button"
+                  onClick={() => handleDayToggle(dia)}
+                  className={`px-4 py-3 rounded-lg border-2 font-medium transition-all ${
+                    formData.diasSemana.includes(dia)
+                      ? "bg-black text-white border-black"
+                      : "bg-white text-gray-700 border-gray-300 hover:border-black"
+                  }`}
+                >
+                  {dia}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500">
+              Seleccionados: {formData.diasSemana.length > 0 ? formData.diasSemana.join(", ") : "Ninguno"}
+            </p>
           </div>
 
           {/* Botones de acción */}
