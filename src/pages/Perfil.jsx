@@ -21,6 +21,71 @@ export default function Perfil() {
     }
   }, []);
 
+  // Si hay usuario, solicitar al backend los días presenciales configurados
+  useEffect(() => {
+    if (!usuario) return;
+
+    const fetchDias = async () => {
+      try {
+        const res = await api.get(
+          `/api/dias-presenciales/usuario/${usuario.id}`
+        );
+        const data = res.data || {};
+
+        const dias = [];
+        if (data.lunes) dias.push("Lunes");
+        if (data.martes) dias.push("Martes");
+        if (data.miercoles) dias.push("Miércoles");
+        if (data.jueves) dias.push("Jueves");
+        if (data.viernes) dias.push("Viernes");
+
+        if (dias.length > 0) {
+          setDiasPresenciales(dias);
+          localStorage.setItem("diasPresenciales", JSON.stringify(dias));
+          setModoEdicion(false);
+        } else {
+          // Si el backend no devuelve días configurados, habilitar edición
+          setModoEdicion(true);
+        }
+      } catch (error) {
+        // Si el backend responde con 400 (no existen datos) — activar edición.
+        if (error.response && error.response.status === 400) {
+          setModoEdicion(true);
+        } else if (error.response) {
+          console.error("Error al obtener días presenciales:", error);
+          const msg =
+            error.response.data?.message ||
+            JSON.stringify(error.response.data) ||
+            error.message;
+          Swal.fire({
+            icon: "error",
+            title: "Error al obtener días",
+            html: `Estado: <b>${error.response.status}</b><br/>${msg}`,
+            confirmButtonColor: "#dc2626",
+          });
+        } else if (error.request) {
+          console.error("No hubo respuesta del servidor:", error);
+          Swal.fire({
+            icon: "error",
+            title: "Servidor inaccesible",
+            text: "No se pudo conectar con el servidor. Verifica que el backend esté levantado.",
+            confirmButtonColor: "#dc2626",
+          });
+        } else {
+          console.error("Error desconocido al obtener días:", error);
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: error.message,
+            confirmButtonColor: "#dc2626",
+          });
+        }
+      }
+    };
+
+    fetchDias();
+  }, [usuario]);
+
   const handleCheckboxChange = (dia) => {
     setDiasPresenciales((prev) =>
       prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia]
@@ -39,10 +104,20 @@ export default function Perfil() {
     }
 
     try {
-      // 🔥 ENVIAR AL BACKEND
-      await api.put(`/dias-presenciales/usuario/${usuario.id}`, {
-        dias: diasPresenciales,
-      });
+      // Preparar DTO esperado por el backend (booleanos por día)
+      const payload = {
+        lunes: diasPresenciales.includes("Lunes"),
+        martes: diasPresenciales.includes("Martes"),
+        miercoles: diasPresenciales.includes("Miércoles"),
+        jueves: diasPresenciales.includes("Jueves"),
+        viernes: diasPresenciales.includes("Viernes"),
+      };
+
+      // Debug: mostrar id y payload antes de enviar
+      console.log("PUT /api/dias-presenciales/usuario/", usuario?.id, payload);
+
+      // 🔥 ENVIAR AL BACKEND usando la ruta completa con /api
+      await api.put(`/api/dias-presenciales/usuario/${usuario.id}`, payload);
 
       // Guardar también localmente para mejorar UX
       localStorage.setItem(
@@ -63,12 +138,32 @@ export default function Perfil() {
     } catch (error) {
       console.error("Error al actualizar días:", error);
 
-      Swal.fire({
-        icon: "error",
-        title: "No se pudieron guardar los cambios",
-        text: "Intentalo nuevamente.",
-        confirmButtonColor: "#dc2626",
-      });
+      if (error.response) {
+        const msg =
+          error.response.data?.message ||
+          JSON.stringify(error.response.data) ||
+          error.message;
+        Swal.fire({
+          icon: "error",
+          title: "Error al guardar",
+          html: `Estado: <b>${error.response.status}</b><br/>${msg}`,
+          confirmButtonColor: "#dc2626",
+        });
+      } else if (error.request) {
+        Swal.fire({
+          icon: "error",
+          title: "Servidor inaccesible",
+          text: "No se recibió respuesta del servidor. Verifica la conexión y que el backend esté funcionando.",
+          confirmButtonColor: "#dc2626",
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: error.message,
+          confirmButtonColor: "#dc2626",
+        });
+      }
     }
   };
 
