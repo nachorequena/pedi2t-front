@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { LoadingSpinner } from "../componets/LoadingSpinner";
-
+import api from "../api/axios";
 export default function Perfil() {
   const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
   const [diasPresenciales, setDiasPresenciales] = useState([]);
@@ -27,7 +27,7 @@ export default function Perfil() {
     );
   };
 
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     if (diasPresenciales.length === 0) {
       Swal.fire({
         icon: "warning",
@@ -38,17 +38,38 @@ export default function Perfil() {
       return;
     }
 
-    localStorage.setItem("diasPresenciales", JSON.stringify(diasPresenciales));
-    setModoEdicion(false);
+    try {
+      // 🔥 ENVIAR AL BACKEND
+      await api.put(`/dias-presenciales/usuario/${usuario.id}`, {
+        dias: diasPresenciales,
+      });
 
-    Swal.fire({
-      icon: "success",
-      title: "Días guardados",
-      html: `Tus días presenciales son:<br><b>${diasPresenciales.join(
-        ", "
-      )}</b>`,
-      confirmButtonColor: "#16a34a",
-    });
+      // Guardar también localmente para mejorar UX
+      localStorage.setItem(
+        "diasPresenciales",
+        JSON.stringify(diasPresenciales)
+      );
+
+      setModoEdicion(false);
+
+      Swal.fire({
+        icon: "success",
+        title: "Días actualizados",
+        html: `Tus días presenciales son:<br><b>${diasPresenciales.join(
+          ", "
+        )}</b>`,
+        confirmButtonColor: "#16a34a",
+      });
+    } catch (error) {
+      console.error("Error al actualizar días:", error);
+
+      Swal.fire({
+        icon: "error",
+        title: "No se pudieron guardar los cambios",
+        text: "Intentalo nuevamente.",
+        confirmButtonColor: "#dc2626",
+      });
+    }
   };
 
   const handleEditar = () => {

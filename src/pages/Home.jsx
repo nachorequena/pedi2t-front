@@ -3,7 +3,6 @@ import MenuCarousel from "../componets/MenuCarousel";
 import Swal from "sweetalert2";
 import api from "../api/axios";
 import { LoadingSpinner } from "../componets/LoadingSpinner";
-
 export default function Home() {
   const [menuData, setMenuData] = useState([]);
   const [mostrarRecordatorio, setMostrarRecordatorio] = useState(false);
@@ -55,15 +54,50 @@ export default function Home() {
     fetchMenus();
   }, []);
 
-  const handleSeleccion = (dia, platoId) => {
+  const handleSeleccion = async (dia, platoId) => {
     console.log(`Seleccionado: ${dia} - Plato ID: ${platoId}`);
-    
+
     Swal.fire({
-      icon: "success",
-      title: "Plato seleccionado",
-      text: `Has seleccionado un plato para ${dia}`,
-      timer: 2000,
-      showConfirmButton: false,
+      title: "Confirmas la seleccion del plato?",
+      text: "No podrás cambiarlo después del viernes.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "si, confirmar",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          // 🔥 POST al backend
+          const response = await api.post("/reservas", {
+            usuarioId: usuario.id,
+            menuPlatoId: platoId,
+            dia: dia, // "lunes", "martes", etc.
+          });
+
+          const Toast = Swal.mixin({
+            toast: true,
+            position: "top-end",
+            showConfirmButton: false,
+            timer: 1500,
+            timerProgressBar: true,
+          });
+
+          Toast.fire({
+            icon: "success",
+            title: "Plato seleccionado con éxito",
+          });
+        } catch (error) {
+          console.error("Error al enviar selección:", error);
+
+          Swal.fire({
+            icon: "error",
+            title: "Error al seleccionar plato",
+            text: "Intentalo nuevamente.",
+          });
+        }
+      }
     });
   };
 
@@ -105,10 +139,7 @@ export default function Home() {
 
       {/* Carrusel de menús por día */}
       <div className="px-4 pb-6">
-        <MenuCarousel 
-          menuData={menuData} 
-          onSeleccion={handleSeleccion}
-        />
+        <MenuCarousel menuData={menuData} onSeleccion={handleSeleccion} />
       </div>
     </div>
   );

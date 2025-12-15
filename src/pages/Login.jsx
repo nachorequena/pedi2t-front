@@ -26,7 +26,6 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      //  Enviar datos al backend
       const response = await api.post("/usuarios/login", {
         email,
         contrasena: password,
@@ -35,7 +34,20 @@ export default function Login() {
       if (response.status === 200 && response.data) {
         const usuario = response.data;
 
+        // Guardar usuario
         localStorage.setItem("usuarioActual", JSON.stringify(usuario));
+
+        //  NUEVO: traer días presenciales del backend
+        try {
+          const diasResponse = await api.get(
+            `api/dias-presenciales/usuario/${usuario.id}`
+          );
+          const dias = diasResponse.data?.dias ?? [];
+          localStorage.setItem("diasPresenciales", JSON.stringify(dias));
+        } catch (error) {
+          console.error("No se pudieron obtener los días presenciales", error);
+          localStorage.removeItem("diasPresenciales");
+        }
 
         Swal.fire({
           icon: "success",
