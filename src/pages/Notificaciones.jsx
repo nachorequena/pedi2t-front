@@ -18,9 +18,9 @@ export default function Notificaciones() {
     try {
       const usuario = JSON.parse(localStorage.getItem("usuarioActual"));
 
-      // Endpoint esperado: GET /usuarios/{usuarioId}/notificaciones
+      // Endpoint: GET /api/usuarios/{usuarioId}/notificaciones
       // Respuesta esperada: [{ id, titulo, mensaje, fecha, leida, tipo }]
-      const response = await api.get(`/usuarios/${usuario.id}/notificaciones`);
+      const response = await api.get(`/api/usuarios/${usuario.id}/notificaciones`);
 
       setNotificaciones(response.data || []);
     } catch (error) {

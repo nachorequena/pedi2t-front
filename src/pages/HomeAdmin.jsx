@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Filter } from "lucide-react";
 import AdminDayCard from "../componets/AdminDayCard";
 import MenuModal from "../componets/MenuModal";
 import Swal from "sweetalert2";
 import axios from "../api/axios";
+import { LoadingSpinner } from "../componets/LoadingSpinner";
 
 export default function HomeAdmin() {
   const [selectedDay, setSelectedDay] = useState("Lunes");
@@ -11,6 +12,7 @@ export default function HomeAdmin() {
   const [selectedDayForModal, setSelectedDayForModal] = useState("");
   const [editingMenu, setEditingMenu] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
+  const [loading, setLoading] = useState(true);
   
   // Estado para almacenar los menús por día
   const [menusPorDia, setMenusPorDia] = useState({
@@ -22,6 +24,110 @@ export default function HomeAdmin() {
   });
 
   const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
+
+  // Cargar menús al montar el componente
+  useEffect(() => {
+    fetchPlatos();
+  }, []);
+
+  const fetchPlatos = async () => {
+    setLoading(true);
+    try {
+      const usuario = JSON.parse(localStorage.getItem("usuarioActual"));
+      
+      if (!usuario || !usuario.id) {
+        Swal.fire({
+          icon: "error",
+          title: "Usuario no encontrado",
+          text: "No se encontró información del usuario.",
+          confirmButtonColor: "#dc2626",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // GET /admin/home/{usuarioId}
+      const response = await axios.get(`/admin/home/${usuario.id}`);
+      
+      console.log("=== DEBUG: Response completo ===", response.data);
+      console.log("=== DEBUG: Menus array ===", response.data.menus);
+
+      // Organizar los platos por día
+      const platosOrganizados = {
+        Lunes: [],
+        Martes: [],
+        Miércoles: [],
+        Jueves: [],
+        Viernes: [],
+      };
+
+      // El backend devuelve { usuarioId, menus: [...] }
+      const menus = response.data.menus || [];
+      
+      console.log("=== DEBUG: Total menus recibidos ===", menus.length);
+      
+      menus.forEach((menu, index) => {
+        console.log(`=== DEBUG: Menu ${index} ===`, menu);
+        
+        // Extraer el día de "Menú del lunes" -> "Lunes"
+        let diaOriginal = menu.descripcion;
+        
+        // Si viene como "Menú del lunes", "Menú del martes", etc.
+        if (menu.descripcion.includes("del ")) {
+          diaOriginal = menu.descripcion.split("del ")[1].trim(); // "lunes", "miércoles"
+        }
+        
+        // Normalizar y capitalizar
+        diaOriginal = diaOriginal.toLowerCase();
+        
+        // Mapear a las claves correctas con acentos
+        const mapasDias = {
+          'lunes': 'Lunes',
+          'martes': 'Martes',
+          'miercoles': 'Miércoles',
+          'miércoles': 'Miércoles',
+          'jueves': 'Jueves',
+          'viernes': 'Viernes'
+        };
+        
+        const diaCapitalizado = mapasDias[diaOriginal] || diaOriginal.charAt(0).toUpperCase() + diaOriginal.slice(1);
+        
+        console.log(`=== DEBUG: Día procesado: ${menu.descripcion} -> ${diaOriginal} -> ${diaCapitalizado}`);
+        
+        if (platosOrganizados[diaCapitalizado]) {
+          menu.platos.forEach((plato, pIndex) => {
+            console.log(`=== DEBUG: Plato ${pIndex} del ${diaCapitalizado} ===`, plato);
+            console.log(`=== DEBUG: URL de imagen ===`, plato.imagenUrl);
+            
+            platosOrganizados[diaCapitalizado].push({
+              id: plato.idPlato,
+              menuPlatoId: plato.menuPlatoId || plato.idMenuPlato, // ID de la relación menu_platos
+              imagenUrl: plato.imagenUrl || "/placeholder.jpg",
+              nombre: plato.nombre,
+              categoria: plato.categoria,
+              descripcion: plato.descripcion,
+              publicado: plato.publicado !== false // Por defecto true si no viene
+            });
+          });
+        } else {
+          console.warn(`=== WARN: Día no reconocido: ${diaCapitalizado}`);
+        }
+      });
+
+      console.log("=== DEBUG: Platos organizados ===", platosOrganizados);
+      setMenusPorDia(platosOrganizados);
+    } catch (error) {
+      console.error("Error al cargar platos:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error al cargar menús",
+        text: "No se pudieron cargar los menús. Intenta nuevamente.",
+        confirmButtonColor: "#dc2626",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddMenu = (dia) => {
     setSelectedDayForModal(dia);
@@ -35,6 +141,59 @@ export default function HomeAdmin() {
     setEditingMenu(menu);
     setEditingIndex(index);
     setIsModalOpen(true);
+  };
+
+  const handleTogglePublicado = async (dia, menu) => {
+    const usuario = JSON.parse(localStorage.getItem("usuarioActual"));
+    
+    if (!usuario || !usuario.id) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se encontró información del usuario.",
+        confirmButtonColor: "#dc2626",
+      });
+      return;
+    }
+
+    if (!menu.menuPlatoId) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se encontró el ID del menú-plato.",
+        confirmButtonColor: "#dc2626",
+      });
+      return;
+    }
+
+    const accion = menu.publicado ? "despublicar" : "republicar";
+    const endpoint = menu.publicado 
+      ? `/admin/despublicarPlato/${usuario.id}/${menu.menuPlatoId}`
+      : `/admin/republicarPlato/${usuario.id}/${menu.menuPlatoId}`;
+
+    try {
+      await axios.put(endpoint);
+
+      Swal.fire({
+        icon: "success",
+        title: `¡Plato ${menu.publicado ? 'despublicado' : 'publicado'}!`,
+        text: `El plato ha sido ${menu.publicado ? 'despublicado' : 'publicado'} correctamente.`,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      // Recargar platos para reflejar el cambio
+      fetchPlatos();
+    } catch (error) {
+      console.error(`Error al ${accion} plato:`, error);
+      
+      Swal.fire({
+        icon: "error",
+        title: `Error al ${accion}`,
+        text: error.response?.data || `No se pudo ${accion} el plato.`,
+        confirmButtonColor: "#dc2626",
+      });
+    }
   };
 
   const handleDeleteMenu = async (dia, index) => {
@@ -51,13 +210,9 @@ export default function HomeAdmin() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
+          // DELETE /admin/eliminarPlato/{id}
           await axios.delete(`/admin/eliminarPlato/${menuId}`);
           
-          setMenusPorDia((prev) => ({
-            ...prev,
-            [dia]: prev[dia].filter((_, i) => i !== index),
-          }));
-
           Swal.fire({
             icon: "success",
             title: "¡Menú eliminado!",
@@ -65,13 +220,31 @@ export default function HomeAdmin() {
             timer: 2000,
             showConfirmButton: false,
           });
+
+          // Recargar platos
+          fetchPlatos();
         } catch (error) {
           console.error("Error al eliminar el menú:", error);
+          
+          let errorMessage = "No se pudo eliminar el menú.";
+          
+          // Verificar si es un error de constraint de BD
+          if (error.response?.status === 409 || 
+              error.response?.data?.includes("constraint") ||
+              error.response?.data?.includes("foreign key")) {
+            errorMessage = "No se puede eliminar este plato porque está asociado a pedidos o menús existentes.";
+          } else if (error.response?.status === 404) {
+            errorMessage = "El endpoint de eliminación no fue encontrado. Verifica la ruta en el backend.";
+          } else if (error.response?.data) {
+            errorMessage = typeof error.response.data === 'string' 
+              ? error.response.data 
+              : error.response.data.message || errorMessage;
+          }
           
           Swal.fire({
             icon: "error",
             title: "Error al eliminar",
-            text: error.response?.data || "No se pudo eliminar el menú. Intenta nuevamente.",
+            text: errorMessage,
             confirmButtonColor: "#dc2626",
           });
         }
@@ -137,6 +310,9 @@ export default function HomeAdmin() {
           return newState;
         });
 
+        // Recargar platos después de actualizar
+        fetchPlatos();
+
         Swal.fire({
           icon: "success",
           title: "¡Menú actualizado!",
@@ -160,6 +336,9 @@ export default function HomeAdmin() {
           });
           return newState;
         });
+
+        // Recargar platos después de agregar
+        fetchPlatos();
 
         Swal.fire({
           icon: "success",
@@ -200,6 +379,10 @@ export default function HomeAdmin() {
       });
     }
   };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -245,6 +428,7 @@ export default function HomeAdmin() {
               onAddMenu={handleAddMenu}
               onEditMenu={handleEditMenu}
               onDeleteMenu={handleDeleteMenu}
+              onTogglePublicado={handleTogglePublicado}
             />
           </div>
         ))}

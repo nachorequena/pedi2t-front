@@ -8,11 +8,13 @@ export default function Home() {
   const [mostrarRecordatorio, setMostrarRecordatorio] = useState(false);
   const [pedidoEnviado, setPedidoEnviado] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [usuario, setUsuario] = useState(null);
 
   useEffect(() => {
-    const usuario = JSON.parse(localStorage.getItem("usuarioActual"));
+    const usuarioActual = JSON.parse(localStorage.getItem("usuarioActual"));
+    setUsuario(usuarioActual);
 
-    if (!usuario || !usuario.id) {
+    if (!usuarioActual || !usuarioActual.id) {
       Swal.fire({
         icon: "error",
         title: "Usuario no encontrado",
@@ -25,7 +27,11 @@ export default function Home() {
 
     const fetchMenus = async () => {
       try {
-        const response = await api.get(`/home/${usuario.id}`);
+        const response = await api.get(`/home/${usuarioActual.id}`);
+
+        console.log("=== DEBUG HOME: Response completo ===", response.data);
+        console.log("=== DEBUG HOME: Menus array ===", response.data.menus);
+        console.log("=== DEBUG HOME: Cantidad de días ===", response.data.menus?.length);
 
         // El backend ahora devuelve { usuarioId, menus: [...] }
         setMenuData(response.data.menus || []);
@@ -54,8 +60,18 @@ export default function Home() {
     fetchMenus();
   }, []);
 
-  const handleSeleccion = async (dia, platoId) => {
-    console.log(`Seleccionado: ${dia} - Plato ID: ${platoId}`);
+  const handleSeleccion = async (dia, platoId, menuDiaId) => {
+    console.log(`Seleccionado: ${dia} - Plato ID: ${platoId} - MenuDia ID: ${menuDiaId}`);
+
+    if (!usuario || !usuario.id) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se encontró información del usuario. Por favor, inicia sesión nuevamente.",
+        confirmButtonColor: "#dc2626",
+      });
+      return;
+    }
 
     Swal.fire({
       title: "Confirmas la seleccion del plato?",
@@ -69,12 +85,47 @@ export default function Home() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          // 🔥 POST al backend
-          const response = await api.post("/reservas", {
-            usuarioId: usuario.id,
-            menuPlatoId: platoId,
-            dia: dia, // "lunes", "martes", etc.
-          });
+          // Validar que todos los datos necesarios están presentes
+          if (!platoId || !menuDiaId) {
+            Swal.fire({
+              icon: "error",
+              title: "Error",
+              text: "Datos incompletos. Por favor, intenta nuevamente.",
+              confirmButtonColor: "#dc2626",
+            });
+            return;
+          }
+
+          const pedidoData = {
+            idUsuario: usuario.id,
+            idPlato: platoId,
+            idMenuDia: menuDiaId,
+            diaEntrega: dia // Enviar el día tal como viene (Lunes, Martes, Miércoles, Jueves, Viernes)
+          };
+
+          console.log("Enviando pedido:", pedidoData);
+
+          // POST al backend con el formato correcto del DTO
+          const response = await api.post("/Pedidos/SeleccionarPedido", pedidoData);
+
+          // Encontrar el plato seleccionado para obtener su nombre
+          const menuSeleccionado = menuData.find(menu => menu.id === menuDiaId);
+          const platoSeleccionado = menuSeleccionado?.platos.find(plato => plato.idPlato === platoId);
+
+          // Guardar en localStorage para que aparezca en Pedidos
+          const pedidosActuales = JSON.parse(localStorage.getItem("pedidoSeleccionado")) || [];
+          const nuevoPedido = {
+            dia: dia,
+            menu: platoSeleccionado?.nombre || "Plato seleccionado",
+            diaId: menuDiaId,
+            platoId: platoId
+          };
+
+          // Verificar si ya existe un pedido para ese día y reemplazarlo
+          const pedidosActualizados = pedidosActuales.filter(p => p.dia !== dia);
+          pedidosActualizados.push(nuevoPedido);
+          
+          localStorage.setItem("pedidoSeleccionado", JSON.stringify(pedidosActualizados));
 
           const Toast = Swal.mixin({
             toast: true,
@@ -90,11 +141,13 @@ export default function Home() {
           });
         } catch (error) {
           console.error("Error al enviar selección:", error);
+          console.error("Detalles del error:", error.response?.data);
+          console.error("Status:", error.response?.status);
 
           Swal.fire({
             icon: "error",
             title: "Error al seleccionar plato",
-            text: "Intentalo nuevamente.",
+            text: error.response?.data?.message || error.response?.data || "Intentalo nuevamente.",
           });
         }
       }

@@ -18,9 +18,14 @@ export default function Navbar() {
   const fetchNotificacionesSinLeer = async () => {
     try {
       const usuarioActual = JSON.parse(localStorage.getItem("usuarioActual"));
-      const response = await axios.get(`/usuarios/${usuarioActual.id}/notificaciones`);
-      const sinLeer = response.data.filter(n => !n.leida).length;
-      setNotificacionesSinLeer(sinLeer);
+      if (!usuarioActual || !usuarioActual.id) return;
+      
+      // TODO: Descomentar cuando el backend tenga el endpoint de notificaciones
+      // const response = await axios.get(`/api/usuarios/${usuarioActual.id}/notificaciones`);
+      // const sinLeer = response.data.filter(n => !n.leida).length;
+      // setNotificacionesSinLeer(sinLeer);
+      
+      setNotificacionesSinLeer(0); // Por ahora siempre 0
     } catch (error) {
       console.error("Error al obtener notificaciones:", error);
     }
@@ -76,12 +81,13 @@ export default function Navbar() {
         <Link to="/" className={linkStyle("/")}>
           Inicio
         </Link>
-        <Link to="/historial" className={linkStyle("/historial")}>
-          Historial
-        </Link>
         <Link to="/pedidos" className={linkStyle("/pedidos")}>
           Pedidos
         </Link>
+        <Link to="/historial" className={linkStyle("/historial")}>
+          Historial
+        </Link>
+        
 
         {/* Notificaciones */}
         <Link to="/notificaciones" className="relative">
