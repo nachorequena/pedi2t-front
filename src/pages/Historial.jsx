@@ -20,12 +20,32 @@ export default function Historial() {
     try {
       const usuario = JSON.parse(localStorage.getItem("usuarioActual"));
       
-      // GET /Pedidos/PedidosRealizados?usuarioId={id}
-      const response = await api.get(`/Pedidos/PedidosRealizados`, {
-        params: { usuarioId: usuario.id }
+      // GET /Pedidos/HistorialPedidos?usuarioId={id}
+      const response = await api.get(`/Pedidos/HistorialPedidos`, {
+        params: { usuarioId: usuario.id },
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
       
-      setHistorialPedidos(response.data.pedidos || []);
+      console.log("=== DEBUG Historial: Response ===", response.data);
+      
+      // Mapear estructura de HistorialPedidosResponseDTO al formato del frontend
+      const pedidosMapeados = (response.data.pedidos || []).map(pedido => ({
+        id: pedido.idPedido,
+        menuNombre: pedido.nombrePlato,
+        categoria: pedido.categoria,
+        imagenUrl: pedido.fotoUrl,
+        fecha: pedido.fechaEntrega,
+        estado: pedido.estado,
+        dia: new Date(pedido.fechaEntrega + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long' }),
+        // Copiar campos adicionales para mantener compatibilidad
+        platoId: pedido.idPedido,
+        diaId: null
+      }));
+      
+      setHistorialPedidos(pedidosMapeados);
     } catch (error) {
       console.error("Error al cargar historial:", error);
       Swal.fire({
@@ -129,7 +149,7 @@ export default function Historial() {
   };
 
   const formatFecha = (fecha) => {
-    const date = new Date(fecha);
+    const date = new Date(fecha + 'T12:00:00');
     return date.toLocaleDateString("es-AR", {
       day: "2-digit",
       month: "2-digit",
@@ -206,19 +226,8 @@ export default function Historial() {
               <X size={24} className="text-gray-600" />
             </button>
 
-            {/* Avatar circular con imagen */}
-            <div className="flex justify-center pt-8 pb-4">
-              <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg">
-                <img
-                  src={selectedPedido.imagenUrl || "/placeholder.jpg"}
-                  alt={selectedPedido.menuNombre}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-
             {/* Contenido del modal */}
-            <div className="px-6 pb-6">
+            <div className="px-6 pb-6 pt-8">
               {/* Imagen grande del plato */}
               <div className="w-full h-48 rounded-2xl overflow-hidden bg-gray-100 mb-4">
                 <img
@@ -246,27 +255,10 @@ export default function Historial() {
               )}
 
               {/* Info adicional */}
-              <div className="text-center text-sm text-gray-500 mb-6">
+              <div className="text-center text-sm text-gray-500">
                 <p>
                   {selectedPedido.dia} - {formatFecha(selectedPedido.fecha)}
                 </p>
-              </div>
-
-              {/* Botones */}
-              <div className="space-y-3">
-                <button
-                  onClick={handleRepetirPedido}
-                  className="w-full bg-blue-400 hover:bg-blue-500 text-white font-semibold py-4 rounded-full shadow-lg transition-colors"
-                >
-                  Repetir pedido
-                </button>
-                
-                <button
-                  onClick={handleCancelarPedido}
-                  className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-4 rounded-full shadow-lg transition-colors"
-                >
-                  Cancelar pedido
-                </button>
               </div>
             </div>
           </div>

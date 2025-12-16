@@ -33,8 +33,43 @@ export default function Home() {
         console.log("=== DEBUG HOME: Menus array ===", response.data.menus);
         console.log("=== DEBUG HOME: Cantidad de días ===", response.data.menus?.length);
 
+        // Ordenar menús por día de la semana (Lunes a Viernes)
+        const ordenDias = {
+          "LUNES": 1,
+          "MARTES": 2,
+          "MIERCOLES": 3,
+          "MIÉRCOLES": 3,
+          "JUEVES": 4,
+          "VIERNES": 5
+        };
+
+        const menusOrdenados = (response.data.menus || []).sort((a, b) => {
+          const diaA = a.descripcion.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          const diaB = b.descripcion.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          
+          // Encontrar el orden del día A
+          let ordenA = 6;
+          for (const [dia, orden] of Object.entries(ordenDias)) {
+            if (diaA.includes(dia)) {
+              ordenA = orden;
+              break;
+            }
+          }
+          
+          // Encontrar el orden del día B
+          let ordenB = 6;
+          for (const [dia, orden] of Object.entries(ordenDias)) {
+            if (diaB.includes(dia)) {
+              ordenB = orden;
+              break;
+            }
+          }
+          
+          return ordenA - ordenB;
+        });
+
         // El backend ahora devuelve { usuarioId, menus: [...] }
-        setMenuData(response.data.menus || []);
+        setMenuData(menusOrdenados);
 
         const pedidoYaEnviado =
           localStorage.getItem("pedidoEnviado") === "true";

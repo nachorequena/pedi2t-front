@@ -22,9 +22,14 @@ export default function PedidosAdmin() {
   const fetchPedidos = async (dia) => {
     setLoading(true);
     try {
-      // GET /admin/platosPedidos
+      // GET /admin/platosPedidos con cache deshabilitado
       // Respuesta: { pedidosPorDia: [{ diaSemana, platos: [...], totalPlatosDia }], totalPedidos, mensaje }
-      const response = await api.get(`/admin/platosPedidos`);
+      const response = await api.get(`/admin/platosPedidos`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       console.log("=== DEBUG PedidosAdmin: Response ===", response.data);
       
@@ -158,8 +163,15 @@ export default function PedidosAdmin() {
         const diaObjetivo = diasMap[diaSemana];
         const diaActual = hoy.getDay() === 0 ? 7 : hoy.getDay(); // Domingo = 7
         
+        // Siempre calcular para la próxima semana (después del próximo lunes)
         let diasHasta = diaObjetivo - diaActual;
-        if (diasHasta <= 0) diasHasta += 7; // Próxima semana
+        if (diasHasta <= 0) {
+          // Si el día ya pasó o es hoy, ir a la próxima semana
+          diasHasta += 7;
+        } else {
+          // Si el día está adelante esta semana, también ir a la próxima
+          diasHasta += 7;
+        }
         
         const fecha = new Date(hoy);
         fecha.setDate(hoy.getDate() + diasHasta);
@@ -211,8 +223,10 @@ export default function PedidosAdmin() {
         showConfirmButton: false,
       });
 
-      // Recargar los pedidos para ver el cambio de estado
-      fetchPedidos(selectedDay);
+      // Esperar un momento y recargar los pedidos con cache limpio
+      setTimeout(() => {
+        fetchPedidos(selectedDay);
+      }, 500);
     } catch (error) {
       console.error("Error al confirmar pedidos:", error);
       Swal.fire({
@@ -224,8 +238,8 @@ export default function PedidosAdmin() {
     }
   };
 
-  // Calcular el día de esta semana según selectedDay
-  const calcularDiaSemanaActual = (diaSeleccionado) => {
+  // Generar array de fechas pasadas del día seleccionado (desde hoy hacia atrás, últimas 8 semanas)
+  const generarFechasPasadas = (diaSeleccionado) => {
     const mapaDias = {
       "Lunes": 1,
       "Martes": 2,
@@ -239,30 +253,31 @@ export default function PedidosAdmin() {
     const diaActual = hoy.getDay(); // 0=Domingo, 1=Lunes, ..., 6=Sábado
     const diaObjetivo = mapaDias[diaSeleccionado];
     
-    // Calcular cuántos días faltan para el día objetivo de esta semana
-    let diasHastaDia;
+    const fechas = [];
+    
+    // Calcular la última ocurrencia del día (hoy o hacia atrás)
+    let diasHastaUltimaOcurrencia;
     if (diaActual === 0) { // Domingo
-      diasHastaDia = diaObjetivo;
-    } else if (diaActual <= diaObjetivo) {
-      // El día objetivo es hoy o está más adelante esta semana
-      diasHastaDia = diaObjetivo - diaActual;
+      diasHastaUltimaOcurrencia = diaObjetivo - 7; // Ir a la semana pasada
+    } else if (diaActual >= diaObjetivo) {
+      // El día ya pasó esta semana o es hoy
+      diasHastaUltimaOcurrencia = diaActual - diaObjetivo;
     } else {
-      // El día objetivo ya pasó esta semana
-      return null; // Devolver null para indicar que ya pasó
+      // El día es más adelante esta semana, ir a la semana pasada
+      diasHastaUltimaOcurrencia = diaActual + (7 - diaObjetivo);
     }
     
-    const diaObjetivoFecha = new Date(hoy);
-    diaObjetivoFecha.setDate(hoy.getDate() + diasHastaDia);
+    // Generar las últimas 8 ocurrencias del día (hacia atrás desde hoy/última ocurrencia)
+    for (let i = 0; i < 8; i++) {
+      const fecha = new Date(hoy);
+      fecha.setDate(hoy.getDate() - diasHastaUltimaOcurrencia - (i * 7));
+      fechas.push(fecha.toISOString().split('T')[0]);
+    }
     
-    return {
-      fecha: diaObjetivoFecha.toISOString().split('T')[0],
-      yaPaso: false
-    };
+    return fechas;
   };
 
-  const diaInfo = calcularDiaSemanaActual(selectedDay);
-  const diaSemanaActual = diaInfo?.fecha;
-  const diaYaPaso = diaInfo === null;
+  const fechasPasadas = generarFechasPasadas(selectedDay);
 
   const handleMarcarEntregado = async () => {
     if (!fechaEntrega) {
@@ -276,14 +291,14 @@ export default function PedidosAdmin() {
     }
 
     try {
-      // PUT /admin/marcarEntregado
-      await api.put("/admin/marcarEntregado", {
+      // PUT /admin/entregarPedidos
+      await api.put("/admin/entregarPedidos", {
         fechaEntrega: fechaEntrega
       });
 
       Swal.fire({
         icon: "success",
-        title: "¡Pedidos marcados!",
+        title: "¡Pedidos entregados!",
         text: `Los pedidos del ${new Date(fechaEntrega + 'T00:00:00').toLocaleDateString('es-AR')} fueron marcados como entregados.`,
         timer: 2000,
         showConfirmButton: false,
@@ -291,14 +306,18 @@ export default function PedidosAdmin() {
 
       setIsEntregadosModalOpen(false);
       setFechaEntrega("");
-      fetchPedidos(selectedDay);
+      
+      // Recargar pedidos con delay
+      setTimeout(() => {
+        fetchPedidos(selectedDay);
+      }, 500);
     } catch (error) {
       console.error("Error al marcar como entregado:", error);
       
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: error.response?.data || "No se pudo marcar como entregado. Intenta nuevamente.",
+        text: error.response?.data?.mensaje || "No se pudo marcar como entregado. Intenta nuevamente.",
         confirmButtonColor: "#dc2626",
       });
     }
@@ -425,7 +444,10 @@ export default function PedidosAdmin() {
             Enviar pedidos
           </button>
           <button 
-            onClick={() => setIsEntregadosModalOpen(true)}
+            onClick={() => {
+              setIsEntregadosModalOpen(true);
+              setFechaEntrega(fechasPasadas[0] || "");
+            }}
             className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold py-4 rounded-full shadow-lg transition-colors flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -459,25 +481,25 @@ export default function PedidosAdmin() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Fecha de entrega
               </label>
-              {diaYaPaso ? (
-                <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-500 text-center">
-                  El {selectedDay.toLowerCase()} de esta semana ya pasó
-                </div>
-              ) : (
-                <>
-                  <input
-                    type="date"
-                    value={fechaEntrega}
-                    onChange={(e) => setFechaEntrega(e.target.value)}
-                    min={diaSemanaActual}
-                    max={diaSemanaActual}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                  <p className="text-xs text-gray-500 mt-2">
-                    Solo puedes marcar como entregados los pedidos del {selectedDay.toLowerCase()} de esta semana ({new Date(diaSemanaActual).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })})
-                  </p>
-                </>
-              )}
+              <select
+                value={fechaEntrega}
+                onChange={(e) => setFechaEntrega(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                {fechasPasadas.map((fecha) => (
+                  <option key={fecha} value={fecha}>
+                    {new Date(fecha + 'T00:00:00').toLocaleDateString('es-AR', { 
+                      weekday: 'long',
+                      day: 'numeric', 
+                      month: 'long', 
+                      year: 'numeric' 
+                    })}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-2">
+                Selecciona la fecha de los pedidos que deseas marcar como entregados
+              </p>
             </div>
 
             <div className="flex gap-3">
@@ -492,8 +514,7 @@ export default function PedidosAdmin() {
               </button>
               <button
                 onClick={handleMarcarEntregado}
-                disabled={diaYaPaso}
-                className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
               >
                 Marcar Entregados
               </button>
