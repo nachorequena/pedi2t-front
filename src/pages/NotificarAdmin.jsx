@@ -21,26 +21,47 @@ export default function NotificarAdmin() {
       // Endpoint esperado: GET /admin/usuarios/sin-seleccion
       // Respuesta esperada: [{ id, username, email, nombre, apellido }]
       const response = await api.get("/admin/usuarios/sin-seleccion");
-      
+
       setUsuarios(response.data || []);
     } catch (error) {
       console.error("Error al cargar usuarios:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error al cargar usuarios",
-        text: "No se pudieron cargar los usuarios sin selección.",
-        confirmButtonColor: "#dc2626",
-      });
+      if (error.response) {
+        const msg =
+          error.response.data?.message ||
+          JSON.stringify(error.response.data) ||
+          error.message;
+        Swal.fire({
+          icon: "error",
+          title: "Error al cargar usuarios",
+          html: `Estado: <b>${error.response.status}</b><br/>${msg}`,
+          confirmButtonColor: "#dc2626",
+        });
+      } else if (error.request) {
+        Swal.fire({
+          icon: "error",
+          title: "Servidor inaccesible",
+          text: "No se pudo conectar con el servidor. Verifica que el backend esté levantado.",
+          confirmButtonColor: "#dc2626",
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: error.message,
+          confirmButtonColor: "#dc2626",
+        });
+      }
       setUsuarios([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const usuariosFiltrados = usuarios.filter((usuario) =>
-    usuario.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    usuario.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    usuario.apellido?.toLowerCase().includes(searchTerm.toLowerCase())
+  const usuariosFiltrados = usuarios.filter(
+    (usuario) =>
+      usuario.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      usuario.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      usuario.apellido?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const toggleUserSelection = (userId) => {
@@ -55,7 +76,7 @@ export default function NotificarAdmin() {
     try {
       // Endpoint esperado: POST /admin/notificar { usuarioId }
       await api.post("/admin/notificar", {
-        usuarioId: usuarioId
+        usuarioId: usuarioId,
       });
 
       Swal.fire({
@@ -70,12 +91,32 @@ export default function NotificarAdmin() {
       fetchUsuariosSinSeleccion();
     } catch (error) {
       console.error("Error al notificar usuario:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error al notificar",
-        text: "No se pudo enviar la notificación.",
-        confirmButtonColor: "#dc2626",
-      });
+      if (error.response) {
+        const msg =
+          error.response.data?.message ||
+          JSON.stringify(error.response.data) ||
+          error.message;
+        Swal.fire({
+          icon: "error",
+          title: "Error al notificar",
+          html: `Estado: <b>${error.response.status}</b><br/>${msg}`,
+          confirmButtonColor: "#dc2626",
+        });
+      } else if (error.request) {
+        Swal.fire({
+          icon: "error",
+          title: "Servidor inaccesible",
+          text: "No se recibió respuesta del servidor. Verifica la conexión y que el backend esté funcionando.",
+          confirmButtonColor: "#dc2626",
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: error.message,
+          confirmButtonColor: "#dc2626",
+        });
+      }
     }
   };
 
@@ -95,12 +136,32 @@ export default function NotificarAdmin() {
       fetchUsuariosSinSeleccion();
     } catch (error) {
       console.error("Error al notificar usuarios:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error al notificar",
-        text: "No se pudieron enviar las notificaciones.",
-        confirmButtonColor: "#dc2626",
-      });
+      if (error.response) {
+        const msg =
+          error.response.data?.message ||
+          JSON.stringify(error.response.data) ||
+          error.message;
+        Swal.fire({
+          icon: "error",
+          title: "Error al notificar",
+          html: `Estado: <b>${error.response.status}</b><br/>${msg}`,
+          confirmButtonColor: "#dc2626",
+        });
+      } else if (error.request) {
+        Swal.fire({
+          icon: "error",
+          title: "Servidor inaccesible",
+          text: "No se recibió respuesta del servidor. Verifica la conexión y que el backend esté funcionando.",
+          confirmButtonColor: "#dc2626",
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: error.message,
+          confirmButtonColor: "#dc2626",
+        });
+      }
     }
   };
 
@@ -162,10 +223,9 @@ export default function NotificarAdmin() {
                 {usuario.username}
               </h3>
               <p className="text-xs text-gray-500">
-                {usuario.nombre && usuario.apellido 
+                {usuario.nombre && usuario.apellido
                   ? `${usuario.nombre} ${usuario.apellido}`
-                  : "Ver perfil"
-                }
+                  : "Ver perfil"}
               </p>
             </div>
 

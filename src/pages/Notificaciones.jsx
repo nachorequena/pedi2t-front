@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Bell, X } from "lucide-react";
 import api from "../api/axios";
 import { LoadingSpinner } from "../componets/LoadingSpinner";
-
 export default function Notificaciones() {
   const [notificaciones, setNotificaciones] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +19,9 @@ export default function Notificaciones() {
 
       // Endpoint: GET /api/usuarios/{usuarioId}/notificaciones
       // Respuesta esperada: [{ id, titulo, mensaje, fecha, leida, tipo }]
-      const response = await api.get(`/api/usuarios/${usuario.id}/notificaciones`);
+      const response = await api.get(
+        `/api/usuarios/${usuario.id}/notificaciones`
+      );
 
       setNotificaciones(response.data || []);
     } catch (error) {
@@ -37,12 +38,21 @@ export default function Notificaciones() {
     // Si no está leída, marcarla como leída
     if (!notificacion.leida) {
       try {
-        // Endpoint esperado: PUT /notificaciones/{id}/marcar-leida
-        await api.put(`/notificaciones/${notificacion.id}/marcar-leida`);
+        // Ruta backend implementada: PUT /api/usuarios/notificaciones/{id}/marcar-leida
+        await api.put(
+          `/api/usuarios/notificaciones/${notificacion.id}/marcar-leida`
+        );
 
         // Actualizar estado local
         setNotificaciones((prev) =>
-          prev.map((n) => (n.id === notificacion.id ? { ...n, leida: true } : n))
+          prev.map((n) =>
+            n.id === notificacion.id ? { ...n, leida: true } : n
+          )
+        );
+
+        // Actualizar modal seleccionado si estaba abierto
+        setSelectedNotificacion((prev) =>
+          prev && prev.id === notificacion.id ? { ...prev, leida: true } : prev
         );
       } catch (error) {
         console.error("Error al marcar notificación como leída:", error);
@@ -56,8 +66,8 @@ export default function Notificaciones() {
 
   const handleEliminarNotificacion = async (notificacionId) => {
     try {
-      // Endpoint esperado: DELETE /notificaciones/{id}
-      await api.delete(`/notificaciones/${notificacionId}`);
+      // Ruta backend implementada: DELETE /api/usuarios/notificaciones/{id}
+      await api.delete(`/api/usuarios/notificaciones/${notificacionId}`);
 
       // Actualizar estado local
       setNotificaciones((prev) => prev.filter((n) => n.id !== notificacionId));
@@ -111,15 +121,16 @@ export default function Notificaciones() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
-      
-        <div className="flex items-center justify-between">
-          {notificacionesNoLeidas > 0 && (
-            <div className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-              {notificacionesNoLeidas} nueva{notificacionesNoLeidas !== 1 ? "s" : ""}
-            </div>
-          )}
-        </div>
-      
+
+      <div className="flex items-center justify-between">
+        {notificacionesNoLeidas > 0 && (
+          <div className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+            {notificacionesNoLeidas} nueva
+            {notificacionesNoLeidas !== 1 ? "s" : ""}
+          </div>
+        )}
+      </div>
+
       {/* Lista de notificaciones */}
       <div className="px-4 pt-4">
         {notificaciones.length === 0 ? (
@@ -148,7 +159,9 @@ export default function Notificaciones() {
                   >
                     <Bell
                       size={20}
-                      className={!notificacion.leida ? "text-white" : "text-gray-600"}
+                      className={
+                        !notificacion.leida ? "text-white" : "text-gray-600"
+                      }
                     />
                   </div>
 
@@ -157,7 +170,9 @@ export default function Notificaciones() {
                     <div className="flex items-start justify-between gap-2">
                       <h3
                         className={`font-semibold text-base ${
-                          !notificacion.leida ? "text-gray-900" : "text-gray-600"
+                          !notificacion.leida
+                            ? "text-gray-900"
+                            : "text-gray-600"
                         }`}
                       >
                         {notificacion.titulo}
@@ -229,7 +244,9 @@ export default function Notificaciones() {
 
               {/* Botón eliminar */}
               <button
-                onClick={() => handleEliminarNotificacion(selectedNotificacion.id)}
+                onClick={() =>
+                  handleEliminarNotificacion(selectedNotificacion.id)
+                }
                 className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-full transition-colors"
               >
                 Eliminar notificación

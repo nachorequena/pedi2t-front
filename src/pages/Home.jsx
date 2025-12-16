@@ -5,7 +5,7 @@ import api from "../api/axios";
 import { LoadingSpinner } from "../componets/LoadingSpinner";
 export default function Home() {
   const [menuData, setMenuData] = useState([]);
-  const [mostrarRecordatorio, setMostrarRecordatorio] = useState(false);
+
   const [pedidoEnviado, setPedidoEnviado] = useState(false);
   const [loading, setLoading] = useState(true);
   const [usuario, setUsuario] = useState(null);
@@ -31,7 +31,10 @@ export default function Home() {
 
         console.log("=== DEBUG HOME: Response completo ===", response.data);
         console.log("=== DEBUG HOME: Menus array ===", response.data.menus);
-        console.log("=== DEBUG HOME: Cantidad de días ===", response.data.menus?.length);
+        console.log(
+          "=== DEBUG HOME: Cantidad de días ===",
+          response.data.menus?.length
+        );
 
         // Ordenar menús por día de la semana (Lunes a Viernes)
         const ordenDias = {
@@ -74,11 +77,6 @@ export default function Home() {
         const pedidoYaEnviado =
           localStorage.getItem("pedidoEnviado") === "true";
         setPedidoEnviado(pedidoYaEnviado);
-
-        const hoy = new Date().getDay(); // 5 = Viernes
-        if (hoy === 5 && !pedidoYaEnviado) {
-          setMostrarRecordatorio(true);
-        }
       } catch (error) {
         console.error("Error al obtener los menús:", error);
         Swal.fire({
@@ -96,7 +94,9 @@ export default function Home() {
   }, []);
 
   const handleSeleccion = async (dia, platoId, menuDiaId) => {
-    console.log(`Seleccionado: ${dia} - Plato ID: ${platoId} - MenuDia ID: ${menuDiaId}`);
+    console.log(
+      `Seleccionado: ${dia} - Plato ID: ${platoId} - MenuDia ID: ${menuDiaId}`
+    );
 
     if (!usuario || !usuario.id) {
       Swal.fire({
@@ -135,32 +135,45 @@ export default function Home() {
             idUsuario: usuario.id,
             idPlato: platoId,
             idMenuDia: menuDiaId,
-            diaEntrega: dia // Enviar el día tal como viene (Lunes, Martes, Miércoles, Jueves, Viernes)
+            diaEntrega: dia, // Enviar el día tal como viene (Lunes, Martes, Miércoles, Jueves, Viernes)
           };
 
           console.log("Enviando pedido:", pedidoData);
 
           // POST al backend con el formato correcto del DTO
-          const response = await api.post("/Pedidos/SeleccionarPedido", pedidoData);
+          const response = await api.post(
+            "/Pedidos/SeleccionarPedido",
+            pedidoData
+          );
 
           // Encontrar el plato seleccionado para obtener su nombre
-          const menuSeleccionado = menuData.find(menu => menu.id === menuDiaId);
-          const platoSeleccionado = menuSeleccionado?.platos.find(plato => plato.idPlato === platoId);
+          const menuSeleccionado = menuData.find(
+            (menu) => menu.id === menuDiaId
+          );
+          const platoSeleccionado = menuSeleccionado?.platos.find(
+            (plato) => plato.idPlato === platoId
+          );
 
           // Guardar en localStorage para que aparezca en Pedidos
-          const pedidosActuales = JSON.parse(localStorage.getItem("pedidoSeleccionado")) || [];
+          const pedidosActuales =
+            JSON.parse(localStorage.getItem("pedidoSeleccionado")) || [];
           const nuevoPedido = {
             dia: dia,
             menu: platoSeleccionado?.nombre || "Plato seleccionado",
             diaId: menuDiaId,
-            platoId: platoId
+            platoId: platoId,
           };
 
           // Verificar si ya existe un pedido para ese día y reemplazarlo
-          const pedidosActualizados = pedidosActuales.filter(p => p.dia !== dia);
+          const pedidosActualizados = pedidosActuales.filter(
+            (p) => p.dia !== dia
+          );
           pedidosActualizados.push(nuevoPedido);
-          
-          localStorage.setItem("pedidoSeleccionado", JSON.stringify(pedidosActualizados));
+
+          localStorage.setItem(
+            "pedidoSeleccionado",
+            JSON.stringify(pedidosActualizados)
+          );
 
           const Toast = Swal.mixin({
             toast: true,
@@ -182,7 +195,10 @@ export default function Home() {
           Swal.fire({
             icon: "error",
             title: "Error al seleccionar plato",
-            text: error.response?.data?.message || error.response?.data || "Intentalo nuevamente.",
+            text:
+              error.response?.data?.message ||
+              error.response?.data ||
+              "Intentalo nuevamente.",
           });
         }
       }
@@ -205,15 +221,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Notificaciones */}
       <div className="px-4 pt-4">
-        {mostrarRecordatorio && (
-          <div className="bg-yellow-400 text-black text-center p-3 rounded-md mb-6 font-medium shadow-md animate-pulse">
-            Recordatorio: tenés tiempo hasta <b>hoy viernes</b> para enviar tu
-            pedido semanal.
-          </div>
-        )}
-
         {pedidoEnviado && (
           <div className="bg-green-400 text-white text-center p-3 rounded-md mb-6 font-medium shadow-md">
             Ya enviaste tu pedido semanal. No es posible modificarlo.
