@@ -1,6 +1,6 @@
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
 
-export default function AdminDayCard({ dia, menus = [], onAddMenu, onEditMenu, onDeleteMenu }) {
+export default function AdminDayCard({ dia, menus = [], onAddMenu, onEditMenu, onDeleteMenu, onTogglePublicado }) {
   return (
     <div className="mb-6">
       {/* Header del día */}
@@ -44,6 +44,32 @@ export default function AdminDayCard({ dia, menus = [], onAddMenu, onEditMenu, o
                   <span className="text-4xl">🍽️</span>
                 </div>
               )}
+              
+              {/* Botón de publicar/despublicar */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePublicado && onTogglePublicado(dia, menu);
+                }}
+                className={`absolute top-2 left-2 z-10 px-3 py-1.5 rounded-full shadow-lg transition-all font-medium text-xs flex items-center gap-1 ${
+                  menu.publicado 
+                    ? 'bg-green-500 hover:bg-green-600 text-white' 
+                    : 'bg-gray-700 hover:bg-gray-800 text-white'
+                }`}
+                title={menu.publicado ? "Despublicar" : "Publicar"}
+              >
+                {menu.publicado ? (
+                  <>
+                    <Eye size={14} />
+                    Publicado
+                  </>
+                ) : (
+                  <>
+                    <EyeOff size={14} />
+                    Despublicado
+                  </>
+                )}
+              </button>
             </div>
 
             {/* Info del menú */}

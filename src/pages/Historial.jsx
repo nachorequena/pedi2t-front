@@ -20,11 +20,12 @@ export default function Historial() {
     try {
       const usuario = JSON.parse(localStorage.getItem("usuarioActual"));
       
-      // Endpoint esperado: GET /usuarios/{usuarioId}/historial
-      // Respuesta esperada: [{ id, menuNombre, categoria, dia, fecha, imagenUrl }]
-      const response = await api.get(`/usuarios/${usuario.id}/historial`);
+      // GET /Pedidos/PedidosRealizados?usuarioId={id}
+      const response = await api.get(`/Pedidos/PedidosRealizados`, {
+        params: { usuarioId: usuario.id }
+      });
       
-      setHistorialPedidos(response.data || []);
+      setHistorialPedidos(response.data.pedidos || []);
     } catch (error) {
       console.error("Error al cargar historial:", error);
       Swal.fire({
@@ -53,12 +54,14 @@ export default function Historial() {
     try {
       const usuario = JSON.parse(localStorage.getItem("usuarioActual"));
       
-      // Endpoint esperado: POST /pedidos/repetir
-      // Body: { usuarioId, menuId, dia }
-      await api.post("/pedidos/repetir", {
+      // POST /Pedidos/SeleccionarPedido
+      await api.post("/Pedidos/SeleccionarPedido", {
         usuarioId: usuario.id,
-        menuId: selectedPedido.menuId,
-        dia: selectedPedido.dia,
+        observaciones: "",
+        pedidos: [{
+          diaId: selectedPedido.diaId,
+          platoId: selectedPedido.platoId
+        }]
       });
 
       Swal.fire({
@@ -70,15 +73,56 @@ export default function Historial() {
       });
 
       handleCloseModal();
-      
-      // Opcional: recargar historial
       fetchHistorial();
     } catch (error) {
       console.error("Error al repetir pedido:", error);
       Swal.fire({
         icon: "error",
         title: "Error al repetir pedido",
-        text: error.response?.data?.message || "No se pudo repetir el pedido.",
+        text: error.response?.data?.mensaje || "No se pudo repetir el pedido.",
+        confirmButtonColor: "#dc2626",
+      });
+    }
+  };
+
+  const handleCancelarPedido = async () => {
+    try {
+      const usuario = JSON.parse(localStorage.getItem("usuarioActual"));
+      
+      const result = await Swal.fire({
+        icon: "warning",
+        title: "¿Cancelar pedido?",
+        text: `¿Estás seguro de cancelar el pedido de ${selectedPedido.menuNombre}?`,
+        showCancelButton: true,
+        confirmButtonText: "Sí, cancelar",
+        cancelButtonText: "No",
+        confirmButtonColor: "#dc2626",
+      });
+
+      if (result.isConfirmed) {
+        // PUT /Pedidos/CancelarPedido
+        await api.put("/Pedidos/CancelarPedido", {
+          usuarioId: usuario.id,
+          pedidoId: selectedPedido.id
+        });
+
+        Swal.fire({
+          icon: "success",
+          title: "Pedido cancelado",
+          text: `Se canceló el pedido de ${selectedPedido.menuNombre}`,
+          timer: 2000,
+          showConfirmButton: false,
+        });
+
+        handleCloseModal();
+        fetchHistorial();
+      }
+    } catch (error) {
+      console.error("Error al cancelar pedido:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error al cancelar",
+        text: error.response?.data?.mensaje || "No se pudo cancelar el pedido.",
         confirmButtonColor: "#dc2626",
       });
     }
@@ -208,13 +252,22 @@ export default function Historial() {
                 </p>
               </div>
 
-              {/* Botón repetir pedido */}
-              <button
-                onClick={handleRepetirPedido}
-                className="w-full bg-blue-400 hover:bg-blue-500 text-white font-semibold py-4 rounded-full shadow-lg transition-colors"
-              >
-                Repetir pedido
-              </button>
+              {/* Botones */}
+              <div className="space-y-3">
+                <button
+                  onClick={handleRepetirPedido}
+                  className="w-full bg-blue-400 hover:bg-blue-500 text-white font-semibold py-4 rounded-full shadow-lg transition-colors"
+                >
+                  Repetir pedido
+                </button>
+                
+                <button
+                  onClick={handleCancelarPedido}
+                  className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-4 rounded-full shadow-lg transition-colors"
+                >
+                  Cancelar pedido
+                </button>
+              </div>
             </div>
           </div>
         </div>

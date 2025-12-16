@@ -10,7 +10,9 @@ export default function MenuCarousel({ menuData, onSeleccion }) {
 
   const obtenerNombreDia = (descripcion) => {
     if (descripcion.toLowerCase().includes("lunes")) return "Lunes";
+    if (descripcion.toLowerCase().includes("martes")) return "Martes";
     if (descripcion.toLowerCase().includes("miércoles") || descripcion.toLowerCase().includes("miercoles")) return "Miércoles";
+    if (descripcion.toLowerCase().includes("jueves")) return "Jueves";
     if (descripcion.toLowerCase().includes("viernes")) return "Viernes";
     return descripcion;
   };
@@ -33,7 +35,7 @@ export default function MenuCarousel({ menuData, onSeleccion }) {
                 {menu.platos.map((plato) => (
                   <div
                     key={plato.idPlato}
-                    onClick={() => onSeleccion && onSeleccion(nombreDia, plato.idPlato)}
+                    onClick={() => onSeleccion && onSeleccion(nombreDia, plato.idPlato, menu.id)}
                     className="cursor-pointer group bg-gray-50 rounded-xl p-4 hover:shadow-lg transition-all duration-300"
                   >
                     {/* Imagen del plato */}
