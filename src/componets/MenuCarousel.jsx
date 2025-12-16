@@ -11,7 +11,7 @@ export default function MenuCarousel({ menuData, onSeleccion }) {
   const obtenerNombreDia = (descripcion) => {
     if (descripcion.toLowerCase().includes("lunes")) return "Lunes";
     if (descripcion.toLowerCase().includes("martes")) return "Martes";
-    if (descripcion.toLowerCase().includes("miércoles") || descripcion.toLowerCase().includes("miercoles")) return "Miércoles";
+    if (descripcion.toLowerCase().includes("miércoles") || descripcion.toLowerCase().includes("miercoles")) return "Miercoles";
     if (descripcion.toLowerCase().includes("jueves")) return "Jueves";
     if (descripcion.toLowerCase().includes("viernes")) return "Viernes";
     return descripcion;
